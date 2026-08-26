@@ -950,6 +950,12 @@ button {
   text-shadow: none;
 }
 
+.goat-rank.not-great {
+  font-size: 1.3rem;
+  color: var(--muted);
+  text-shadow: none;
+}
+
 .goat-context {
   color: var(--muted);
   font-size: 0.9rem;

@@ -1,7 +1,10 @@
 // All-time GOAT ranking: once a simulated career ends, this places it
-// among a curated list of real legends' actual career achievements, so
-// "21 career titles and a #9 peak" gets a concrete answer to "so... how
-// good is that, really?" instead of sitting alone with no context.
+// among a curated top-25 list of real legends' actual career
+// achievements, so "21 career titles and a #9 peak" gets a concrete
+// answer to "so... how good is that, really?" instead of sitting alone
+// with no context. A career that doesn't outscore even the 25th-best
+// benchmark isn't given a fake "#26 of 25" - it's reported as not
+// cracking the list at all (see computeGoatRanking's isAllTimeGreat).
 //
 // The benchmark stats below are well-known, widely-cited approximations
 // (slam counts, Masters 1000 titles, total career titles, career-peak
@@ -133,6 +136,86 @@ export const GOAT_BENCHMARKS = [
     peakRanking: 2,
     seasonsPlayed: 14,
   },
+  {
+    name: "Jim Courier",
+    slamTitles: 4,
+    masterTitles: 5,
+    titles: 23,
+    peakRanking: 1,
+    seasonsPlayed: 12,
+  },
+  {
+    name: "Gustavo Kuerten",
+    slamTitles: 3,
+    masterTitles: 5,
+    titles: 20,
+    peakRanking: 1,
+    seasonsPlayed: 14,
+  },
+  {
+    name: "Lleyton Hewitt",
+    slamTitles: 2,
+    masterTitles: 6,
+    titles: 30,
+    peakRanking: 1,
+    seasonsPlayed: 17,
+  },
+  {
+    name: "Yevgeny Kafelnikov",
+    slamTitles: 2,
+    masterTitles: 4,
+    titles: 26,
+    peakRanking: 1,
+    seasonsPlayed: 14,
+  },
+  {
+    name: "Thomas Muster",
+    slamTitles: 1,
+    masterTitles: 8,
+    titles: 44,
+    peakRanking: 1,
+    seasonsPlayed: 13,
+  },
+  {
+    name: "Sergi Bruguera",
+    slamTitles: 2,
+    masterTitles: 1,
+    titles: 14,
+    peakRanking: 3,
+    seasonsPlayed: 11,
+  },
+  {
+    name: "Michael Chang",
+    slamTitles: 1,
+    masterTitles: 1,
+    titles: 34,
+    peakRanking: 2,
+    seasonsPlayed: 16,
+  },
+  {
+    name: "Juan Martin del Potro",
+    slamTitles: 1,
+    masterTitles: 1,
+    titles: 22,
+    peakRanking: 3,
+    seasonsPlayed: 13,
+  },
+  {
+    name: "Richard Krajicek",
+    slamTitles: 1,
+    masterTitles: 2,
+    titles: 17,
+    peakRanking: 4,
+    seasonsPlayed: 13,
+  },
+  {
+    name: "Petr Korda",
+    slamTitles: 1,
+    masterTitles: 0,
+    titles: 11,
+    peakRanking: 2,
+    seasonsPlayed: 11,
+  },
 ];
 
 function peakRankingBonus(peakRanking) {
@@ -170,6 +253,13 @@ export function computeGoatScore(entry) {
  * Ranks a finished career (from summarizeCareer()) against the benchmark
  * legends, all scored the same way. Returns where it lands, plus who's
  * immediately above/below for a concrete "just ahead of X" comparison.
+ *
+ * `total` is always the size of the benchmark list (not benchmarks+1) -
+ * "#N of 25" reads as "among the 25 greatest of all time", not as a
+ * headcount that happens to include you. If the career doesn't outscore
+ * any benchmark at all, `isAllTimeGreat` is false and `rank`/`above`/
+ * `below` should be ignored - there's no honest numeric rank to give a
+ * career that every single benchmark beat.
  */
 export function computeGoatRanking(summary) {
   const you = { name: "You", isYou: true, score: computeGoatScore(summary) };
@@ -184,11 +274,14 @@ export function computeGoatRanking(summary) {
   all.sort((a, b) => b.score - a.score);
 
   const index = all.findIndex((entry) => entry.isYou);
+  const isAllTimeGreat = index < GOAT_BENCHMARKS.length;
+
   return {
+    isAllTimeGreat,
     rank: index + 1,
-    total: all.length,
+    total: GOAT_BENCHMARKS.length,
     score: you.score,
     above: index > 0 ? all[index - 1].name : null,
-    below: index < all.length - 1 ? all[index + 1].name : null,
+    below: isAllTimeGreat && index < all.length - 1 ? all[index + 1].name : null,
   };
 }

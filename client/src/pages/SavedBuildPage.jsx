@@ -77,9 +77,13 @@ export default function SavedBuildPage() {
         <div className="career-summary">
           <div className="goat-block">
             <p className="result-kicker">All-Time Ranking</p>
-            <p className="goat-rank">
-              #{build.career.goatRank} <span>of {build.career.goatTotal}</span>
-            </p>
+            {build.career.goatIsAllTimeGreat ? (
+              <p className="goat-rank">
+                #{build.career.goatRank} <span>of {build.career.goatTotal}</span>
+              </p>
+            ) : (
+              <p className="goat-rank not-great">Not an All-Time Great</p>
+            )}
           </div>
           <h2>Career Totals</h2>
           <div className="career-summary-grid">

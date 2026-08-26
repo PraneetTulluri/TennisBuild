@@ -53,6 +53,7 @@ const buildSchema = new mongoose.Schema(
       careerRecordLosses: Number,
       goatRank: Number,
       goatTotal: Number,
+      goatIsAllTimeGreat: Boolean,
     },
   },
   { timestamps: true }

@@ -99,6 +99,7 @@ export default function CareerPage() {
       careerRecordLosses: summary.careerRecord.losses,
       goatRank: goat.rank,
       goatTotal: goat.total,
+      goatIsAllTimeGreat: goat.isAllTimeGreat,
     })
       .then(() => setCareerSaveStatus("saved"))
       .catch(() => setCareerSaveStatus("error"));
@@ -145,19 +146,33 @@ export default function CareerPage() {
         <div className="career-summary">
           <div className="goat-block">
             <p className="result-kicker">All-Time Ranking</p>
-            <p className="goat-rank">
-              #{goat.rank} <span>of {goat.total}</span>
-            </p>
-            {goat.above && (
-              <p className="goat-context">
-                Just behind <strong>{goat.above}</strong>
-                {goat.below ? `, just ahead of ${goat.below}` : ""}
-              </p>
-            )}
-            {!goat.above && goat.below && (
-              <p className="goat-context">
-                The greatest of all time - ahead of <strong>{goat.below}</strong>
-              </p>
+            {goat.isAllTimeGreat ? (
+              <>
+                <p className="goat-rank">
+                  #{goat.rank} <span>of {goat.total}</span>
+                </p>
+                {goat.above && (
+                  <p className="goat-context">
+                    Just behind <strong>{goat.above}</strong>
+                    {goat.below ? `, just ahead of ${goat.below}` : ""}
+                  </p>
+                )}
+                {!goat.above && goat.below && (
+                  <p className="goat-context">
+                    The greatest of all time - ahead of <strong>{goat.below}</strong>
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="goat-rank not-great">Not an All-Time Great</p>
+                {goat.above && (
+                  <p className="goat-context">
+                    Did not crack the top {goat.total} - closest was{" "}
+                    <strong>{goat.above}</strong>
+                  </p>
+                )}
+              </>
             )}
           </div>
 

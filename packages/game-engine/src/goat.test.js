@@ -29,6 +29,18 @@ describe("computeGoatScore", () => {
 });
 
 describe("computeGoatRanking", () => {
+  it("total is always the size of the benchmark list (25), not benchmarks+1", () => {
+    const result = computeGoatRanking({
+      slamTitles: 3,
+      masterTitles: 2,
+      titles: 20,
+      peakRanking: 12,
+      seasonsPlayed: 10,
+    });
+    expect(result.total).toBe(GOAT_BENCHMARKS.length);
+    expect(GOAT_BENCHMARKS.length).toBe(25);
+  });
+
   it("places an all-time-great-caliber career at or near the very top", () => {
     const dominant = {
       slamTitles: 25,
@@ -38,11 +50,27 @@ describe("computeGoatRanking", () => {
       seasonsPlayed: 20,
     };
     const result = computeGoatRanking(dominant);
+    expect(result.isAllTimeGreat).toBe(true);
     expect(result.rank).toBeLessThanOrEqual(2);
-    expect(result.total).toBe(GOAT_BENCHMARKS.length + 1);
   });
 
-  it("places a modest career near the bottom", () => {
+  it("a career that barely edges out the single weakest benchmark still cracks the top 25", () => {
+    // The weakest benchmark scores 233 (Richard Krajicek) - a career just
+    // above that, but below everything else, lands at exactly #25.
+    const barelyQualifies = {
+      slamTitles: 1,
+      masterTitles: 1,
+      titles: 25,
+      peakRanking: 4,
+      seasonsPlayed: 13,
+    };
+    const result = computeGoatRanking(barelyQualifies);
+    expect(result.isAllTimeGreat).toBe(true);
+    expect(result.rank).toBe(25);
+    expect(result.below).toBe("Richard Krajicek");
+  });
+
+  it("a career weaker than every benchmark is reported as not an all-time great, not a fake rank", () => {
     const modest = {
       slamTitles: 0,
       masterTitles: 0,
@@ -51,12 +79,11 @@ describe("computeGoatRanking", () => {
       seasonsPlayed: 4,
     };
     const result = computeGoatRanking(modest);
-    expect(result.rank).toBe(result.total); // dead last
+    expect(result.isAllTimeGreat).toBe(false);
     expect(result.below).toBeNull();
-    expect(result.above).not.toBeNull();
   });
 
-  it("rank and total are always internally consistent", () => {
+  it("rank never exceeds total when it is an all-time great", () => {
     const result = computeGoatRanking({
       slamTitles: 3,
       masterTitles: 2,
@@ -64,6 +91,7 @@ describe("computeGoatRanking", () => {
       peakRanking: 12,
       seasonsPlayed: 10,
     });
+    expect(result.isAllTimeGreat).toBe(true);
     expect(result.rank).toBeGreaterThanOrEqual(1);
     expect(result.rank).toBeLessThanOrEqual(result.total);
   });
