@@ -49,6 +49,20 @@ export function computeBestSurface(attributes) {
 }
 
 /**
+ * How strong a build is on one specific surface (not necessarily its
+ * best). Used by career simulation to score a match on the surface that
+ * tournament is actually being played on, rather than the build's best
+ * surface overall.
+ */
+export function computeSurfaceStrength(attributes, surfaceKey) {
+  const surface = SURFACES.find((s) => s.key === surfaceKey);
+  if (!surface) {
+    throw new Error(`Unknown surface: "${surfaceKey}"`);
+  }
+  return weightedScore(attributes, surface.weights);
+}
+
+/**
  * Overall rating: the score of the build's best-fitting archetype,
  * rounded to a whole number. A specialist and a generalist build with the
  * same raw attribute sum can land on different overalls here, because

@@ -18,7 +18,18 @@ export { ARCHETYPES, SURFACES } from "./archetypes.js";
 export {
   computeArchetype,
   computeBestSurface,
+  computeSurfaceStrength,
   computeOverall,
   computeStrengthsAndWeaknesses,
   nearestPlayerComps,
 } from "./scoring.js";
+export {
+  SLAM_CALENDAR,
+  SLAM_RESULT_POINTS,
+  ageFactor,
+  shouldRetire,
+  pointsToRanking,
+  createCareerState,
+  simulateNextSeason,
+  summarizeCareer,
+} from "./career.js";

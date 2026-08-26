@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   ATTRIBUTE_KEYS,
   ATTRIBUTE_LABELS,
@@ -19,6 +19,7 @@ import PlayerCard from "../components/Wheel/PlayerCard.jsx";
  */
 export default function ResultPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { locked, history, playerPool } = location.state ?? {};
 
   const attributes = useMemo(() => {
@@ -120,11 +121,20 @@ export default function ResultPage() {
         ))}
       </div>
 
-      <Link to="/draft">
-        <button type="button" className="spin-button">
-          Build Another
+      <div className="result-actions">
+        <button
+          type="button"
+          className="spin-button"
+          onClick={() => navigate("/career", { state: { attributes, playerPool } })}
+        >
+          Simulate Career
         </button>
-      </Link>
+        <Link to="/draft">
+          <button type="button" className="secondary-button">
+            Build Another
+          </button>
+        </Link>
+      </div>
     </div>
   );
 }
