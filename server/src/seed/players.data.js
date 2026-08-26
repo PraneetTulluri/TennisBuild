@@ -37,6 +37,7 @@ export const playersSeedData = [
       volley: "Surgical touch at net, a throwback to serve-and-volley eras.",
     },
     bio: "Swiss all-time great known for effortless shot-making and net play.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/425.png",
   },
   {
     name: "Rafael Nadal",
@@ -61,6 +62,7 @@ export const playersSeedData = [
       mentalToughness: "Famously unbreakable competitor in tight matches.",
     },
     bio: "Spanish legend, the most dominant clay-court player in history.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/261.png",
   },
   {
     name: "Novak Djokovic",
@@ -85,6 +87,7 @@ export const playersSeedData = [
       backhand: "A rock-solid two-handed backhand that rarely breaks down.",
     },
     bio: "Serbian great known for elite defense, return of serve, and mental resilience.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/296.png",
   },
   {
     name: "Pete Sampras",
@@ -322,6 +325,7 @@ export const playersSeedData = [
         "Elite defensive counterpuncher who covers the court as well as anyone of his era.",
     },
     bio: "British counterpuncher renowned for elite defense and tactical intelligence.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/235.png",
   },
   {
     name: "Stan Wawrinka",
@@ -345,6 +349,7 @@ export const playersSeedData = [
       backhand: "One of the most devastating one-handed backhands in tennis history.",
     },
     bio: "Swiss three-time Slam champion famous for his one-handed backhand.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/264.png",
   },
   {
     name: "Juan Martin del Potro",
@@ -369,6 +374,7 @@ export const playersSeedData = [
       power: "Combined immense height and racquet-head speed for crushing power.",
     },
     bio: "Argentine power-hitter and 2009 US Open champion.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/284.png",
   },
   {
     name: "Lleyton Hewitt",
@@ -392,6 +398,7 @@ export const playersSeedData = [
       mentalToughness: "'C'mon!' - one of the fiercest competitors of his generation.",
     },
     bio: "Relentless Australian counterpuncher and former world No. 1.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/306.png",
   },
   {
     name: "Gustavo Kuerten",
@@ -556,6 +563,7 @@ export const playersSeedData = [
         "Won Grand Slams on three different surfaces in a single season (1988).",
     },
     bio: "Swedish all-court great who won majors on clay, hard, and grass.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/1689.png",
   },
   {
     name: "Guillermo Vilas",
@@ -694,6 +702,7 @@ export const playersSeedData = [
       forehand: "Big, flat forehand that powered him to the 1998 French Open title.",
     },
     bio: "Spanish clay specialist and former world No. 1.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/253.png",
   },
   {
     name: "Juan Carlos Ferrero",
@@ -743,6 +752,7 @@ export const playersSeedData = [
       volley: "Exceptional touch and drop-shot creativity for a modern power player.",
     },
     bio: "Spanish phenom and multiple Grand Slam champion known for explosive, creative shot-making.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/3782.png",
   },
   {
     name: "Jannik Sinner",
@@ -766,6 +776,7 @@ export const playersSeedData = [
       backhand: "Devastatingly flat, early-hit two-handed backhand.",
     },
     bio: "Italian world No. 1 known for flat, relentless ball-striking off both wings.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/3623.png",
   },
   {
     name: "Daniil Medvedev",
@@ -790,6 +801,7 @@ export const playersSeedData = [
         "Elite returner who neutralizes big servers with unusual court positioning.",
     },
     bio: "Unorthodox Russian counterpuncher known for his elite return game.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/2383.png",
   },
   {
     name: "Alexander Zverev",
@@ -813,6 +825,7 @@ export const playersSeedData = [
       serve: "Towering, powerful serve backed by elite court coverage for his size.",
     },
     bio: "German power baseliner with a massive serve and elite two-handed backhand.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/2375.png",
   },
   {
     name: "Casper Ruud",
@@ -836,6 +849,7 @@ export const playersSeedData = [
       forehand: "Heavy, high-bouncing topspin forehand built for clay.",
     },
     bio: "Norwegian clay-court specialist and multiple Grand Slam finalist.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/2989.png",
   },
   {
     name: "Holger Rune",
@@ -883,6 +897,7 @@ export const playersSeedData = [
       serve: "One of the biggest, most reliable serves on the modern tour.",
     },
     bio: "American big-serving power player and Grand Slam finalist.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/2946.png",
   },
   {
     name: "Grigor Dimitrov",
@@ -906,6 +921,7 @@ export const playersSeedData = [
       backhand: "Elegant one-handed backhand that earned him the nickname 'Baby Fed'.",
     },
     bio: "Bulgarian stylist with an elegant one-handed backhand.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/1287.png",
   },
   {
     name: "Frances Tiafoe",
@@ -929,6 +945,7 @@ export const playersSeedData = [
       movement: "Explosive athleticism that fuels his crowd-pleasing style.",
     },
     bio: "Athletic American known for flashy shot-making and crowd-pleasing energy.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/2708.png",
   },
   {
     name: "Felix Auger-Aliassime",
@@ -952,6 +969,7 @@ export const playersSeedData = [
       serve: "Huge, athletic serve that's among the tour's most consistent weapons.",
     },
     bio: "Canadian power player with one of the tour's biggest serves and forehands.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/3209.png",
   },
   {
     name: "Andrey Rublev",
@@ -976,6 +994,7 @@ export const playersSeedData = [
       mentalToughness: "Passionate, occasionally combustible on-court emotion.",
     },
     bio: "Russian power baseliner known for one of the tour's biggest forehands.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/2642.png",
   },
   {
     name: "Hubert Hurkacz",
@@ -999,6 +1018,7 @@ export const playersSeedData = [
       serve: "One of the most efficient, high-percentage serves in the modern game.",
     },
     bio: "Polish big-server known for one of the most efficient service games on tour.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/2726.png",
   },
   {
     name: "Tommy Paul",
@@ -1022,6 +1042,7 @@ export const playersSeedData = [
       movement: "Quick, well-rounded movement that anchors a versatile all-court game.",
     },
     bio: "American all-courter known for solid movement and counterpunching instincts.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/2964.png",
   },
   {
     name: "Ben Shelton",
@@ -1068,6 +1089,7 @@ export const playersSeedData = [
       backhand: "Stylish one-handed backhand paired with an aggressive net game.",
     },
     bio: "Greek all-courter with an elegant one-handed backhand and aggressive net game.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/2869.png",
   },
 
   // --- Variance / sharp tradeoff players (5) ---
@@ -1096,6 +1118,7 @@ export const playersSeedData = [
       movement: "Limited court coverage due to his sheer size.",
     },
     bio: "American giant famous for one of the most dominant serves in tennis history.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/1023.png",
   },
   {
     name: "Gael Monfils",
@@ -1120,6 +1143,7 @@ export const playersSeedData = [
       mentalToughness: "Prone to lapses in focus during long matches.",
     },
     bio: "French athlete known for spectacular movement and highlight-reel points.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/242.png",
   },
   {
     name: "Ivo Karlovic",
@@ -1145,6 +1169,7 @@ export const playersSeedData = [
       movement: "Elite height comes at the cost of significantly limited court coverage.",
     },
     bio: "Croatian giant who holds the all-time ATP aces record with arguably the biggest serve ever.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/233.png",
   },
   {
     name: "Benoit Paire",
@@ -1170,6 +1195,7 @@ export const playersSeedData = [
       backhand: "Gifted, versatile shot-making unlike almost anyone else on tour.",
     },
     bio: "Talented French shot-maker whose skill is undercut by notorious inconsistency.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/1571.png",
   },
   {
     name: "Nick Kyrgios",
@@ -1195,5 +1221,6 @@ export const playersSeedData = [
         "Immense talent frequently undercut by self-admitted lapses in focus.",
     },
     bio: "Enormously talented Australian with a huge serve and dazzling touch, but famously inconsistent.",
+    imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/1984.png",
   },
 ];

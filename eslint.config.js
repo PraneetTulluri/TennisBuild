@@ -27,20 +27,40 @@ export default [
       parserOptions: {
         ecmaFeatures: { jsx: true },
       },
-      globals: { window: "readonly", document: "readonly", fetch: "readonly" },
+      globals: {
+        window: "readonly",
+        document: "readonly",
+        fetch: "readonly",
+        requestAnimationFrame: "readonly",
+        cancelAnimationFrame: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+      },
     },
     rules: {
       ...react.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
       "react/react-in-jsx-scope": "off", // not needed with the modern JSX transform
+      // This project is plain JS with no `prop-types` dependency (a
+      // deliberate MVP simplicity choice, see Phase 1 tooling notes) -
+      // enforcing PropTypes validation without that package installed
+      // would just be noise, not a real safety net.
+      "react/prop-types": "off",
     },
     settings: { react: { version: "detect" } },
   },
   {
-    // Node-only globals for server and game-engine (process, console, etc.)
+    // Node-only globals for server and game-engine (process, console, the
+    // built-in fetch/timer globals available in Node 18+, etc.)
     files: ["server/**/*.js", "packages/**/*.js"],
     languageOptions: {
-      globals: { process: "readonly", console: "readonly" },
+      globals: {
+        process: "readonly",
+        console: "readonly",
+        fetch: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+      },
     },
   },
   prettierConfig,

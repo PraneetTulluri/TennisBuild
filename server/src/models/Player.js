@@ -1,18 +1,11 @@
 import mongoose from "mongoose";
+import { ATTRIBUTE_KEYS } from "@tennisbuild/game-engine";
 
-// The 8 MVP attribute categories (see Phase 0 design doc). Every Player
-// document must have a rating for each of these, 1-99, since a round can
-// land on any player and reveal their full card.
-const ATTRIBUTE_KEYS = [
-  "forehand",
-  "backhand",
-  "serve",
-  "return",
-  "volley",
-  "movement",
-  "power",
-  "mentalToughness",
-];
+// ATTRIBUTE_KEYS now comes from the shared game-engine package rather than
+// being hardcoded here - the client's draft UI needs the exact same list
+// (for labels, lock-state tracking, etc.), and keeping two copies in sync
+// by hand was exactly the kind of drift risk a shared source of truth
+// exists to avoid.
 
 // Build the attributes sub-schema programmatically from ATTRIBUTE_KEYS
 // instead of writing out 8 near-identical field definitions by hand -
@@ -68,4 +61,3 @@ const playerSchema = new mongoose.Schema(
 );
 
 export const Player = mongoose.model("Player", playerSchema);
-export { ATTRIBUTE_KEYS };
