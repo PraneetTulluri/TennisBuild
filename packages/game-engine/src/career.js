@@ -1,17 +1,24 @@
 import { ATTRIBUTE_KEYS } from "./attributes.js";
-import { computeOverall, computeSurfaceStrength } from "./scoring.js";
+import { computeSurfaceStrength } from "./scoring.js";
 import { pickDistinct } from "./wheel.js";
 
 // Career simulation: takes a finished build's attributes and simulates a
 // full career, one season at a time, from age 18 until retirement.
 //
-// Design (see the career-simulation design discussion for the full
-// reasoning): Grand Slams are simulated round-by-round (the player's own
-// path through a 7-round bracket, not the whole draw) since that's where
-// the dramatic "beat a real legend" moments matter; everything else on
-// tour collapses into one aggregate season contribution, no per-match
-// detail. Attributes scale over the career via an age curve (rise, peak,
-// decline) rather than staying fixed, so careers have a real shape.
+// Design: Grand Slams are simulated round-by-round (the player's own path
+// through a 7-round bracket, not the whole draw), with the quarterfinal
+// round onward played against real *currently active* players from the
+// pool - not retired legends, since this is a simulation of the current
+// tour. Individual opponents are never named in the output, though -
+// naming a specific real player as "beaten" every year across a decade+
+// career would imply they're frozen in time rather than aging themselves,
+// which the simulation has no way to model. Masters 1000s and the rest of
+// the regular tour are also simulated bracket-by-bracket (against generated
+// opposition, not named real players) purely so season win/loss totals
+// and title counts are accurate, without adding narrative clutter.
+//
+// Attributes scale over the career via an age curve (rise, peak, decline)
+// rather than staying fixed, so careers have a real shape.
 
 // ---------- Age curve ----------
 
@@ -56,71 +63,7 @@ export function shouldRetire(age) {
   return Math.random() < Math.min(0.92, baseChance + declineChance);
 }
 
-// ---------- Grand Slams ----------
-
-export const SLAM_CALENDAR = [
-  { key: "australianOpen", label: "Australian Open", surface: "hard" },
-  { key: "frenchOpen", label: "French Open", surface: "clay" },
-  { key: "wimbledon", label: "Wimbledon", surface: "grass" },
-  { key: "usOpen", label: "US Open", surface: "hard" },
-];
-
-// The player's own path through a 7-round bracket - R128 through the
-// Final - not the full draw. Only the last 3 rounds face real players
-// from the pool; earlier rounds face generated journeymen, difficulty
-// rising with the round.
-const SLAM_ROUNDS = ["R128", "R64", "R32", "R16", "QF", "SF", "F"];
-const REAL_OPPONENT_ROUNDS = new Set(["QF", "SF", "F"]);
-const JOURNEYMAN_BASELINE = { R128: 50, R64: 55, R32: 60, R16: 68 };
-
-export const SLAM_RESULT_POINTS = {
-  R128: 10,
-  R64: 45,
-  R32: 90,
-  R16: 180,
-  QF: 360,
-  SF: 720,
-  F: 1200,
-  W: 2000,
-};
-
-const JOURNEYMAN_FIRST_NAMES = [
-  "Marek",
-  "Diego",
-  "Lars",
-  "Yusuke",
-  "Tomas",
-  "Kwame",
-  "Aleksi",
-  "Rui",
-  "Nikolai",
-  "Bram",
-];
-const JOURNEYMAN_LAST_NAMES = [
-  "Vondracek",
-  "Ferrante",
-  "Bergstrom",
-  "Tanaka",
-  "Herrera",
-  "Owusu",
-  "Laine",
-  "Costa",
-  "Petrov",
-  "de Vries",
-];
-
-function generateJourneyman(round) {
-  const baseline = JOURNEYMAN_BASELINE[round] ?? 50;
-  const attributes = {};
-  for (const key of ATTRIBUTE_KEYS) {
-    const jitter = (Math.random() - 0.5) * 16; // +/- 8
-    attributes[key] = clamp(Math.round(baseline + jitter), 20, 90);
-  }
-  const name = `${JOURNEYMAN_FIRST_NAMES[Math.floor(Math.random() * JOURNEYMAN_FIRST_NAMES.length)]} ${
-    JOURNEYMAN_LAST_NAMES[Math.floor(Math.random() * JOURNEYMAN_LAST_NAMES.length)]
-  }`;
-  return { name, attributes };
-}
+// ---------- Shared match model ----------
 
 /**
  * Win probability for one match, from each side's surface-specific
@@ -141,82 +84,157 @@ function matchWinProbability(
   return clamp(base + clutch, 0.03, 0.97);
 }
 
-const SET_SCORES = ["6-2", "6-3", "6-4", "7-5", "7-6"];
-
-/**
- * A plausible-looking set-score line for a match - flavor text only, not
- * a simulated point-by-point match. Closer matches (win probability near
- * 50%) are more likely to go 3 sets and include a tight set; lopsided
- * ones read as straightforward two-set wins.
- */
-function generateScoreLine(closeness) {
-  const setCount = closeness > 0.6 && Math.random() < 0.5 ? 3 : 2;
-  const sets = [];
-  for (let i = 0; i < setCount; i++) {
-    const set = SET_SCORES[Math.floor(Math.random() * SET_SCORES.length)];
-    const droppedByWinner = Math.random() < closeness * 0.35;
-    sets.push(droppedByWinner ? set.split("-").reverse().join("-") : set);
-  }
-  return sets.join(", ");
+function rollMatch(attributes, opponentAttributes, surface) {
+  const playerStrength = computeSurfaceStrength(attributes, surface);
+  const opponentStrength = computeSurfaceStrength(opponentAttributes, surface);
+  const probability = matchWinProbability(
+    playerStrength,
+    opponentStrength,
+    attributes.mentalToughness,
+    opponentAttributes.mentalToughness
+  );
+  return Math.random() < probability;
 }
+
+/** A generated opponent's attributes, jittered around a baseline strength - no name, since none is ever shown. */
+function generateOpponentAttributes(baseline) {
+  const attributes = {};
+  for (const key of ATTRIBUTE_KEYS) {
+    const jitter = (Math.random() - 0.5) * 16; // +/- 8
+    attributes[key] = clamp(Math.round(baseline + jitter), 20, 90);
+  }
+  return attributes;
+}
+
+/** Currently active players only - this is a simulation of today's tour, not a mix of eras. */
+function activePlayers(pool) {
+  const active = pool.filter((p) => p.careerStatus === "active");
+  return active.length >= 3 ? active : pool; // fallback for a small/test pool
+}
+
+// ---------- Grand Slams ----------
+
+export const SLAM_CALENDAR = [
+  { key: "australianOpen", label: "Australian Open", surface: "hard" },
+  { key: "frenchOpen", label: "French Open", surface: "clay" },
+  { key: "wimbledon", label: "Wimbledon", surface: "grass" },
+  { key: "usOpen", label: "US Open", surface: "hard" },
+];
+
+// The player's own path through a 7-round bracket - R128 through the
+// Final - not the full draw. Only the last 3 rounds face real, currently
+// active players from the pool; earlier rounds face generated opponents,
+// difficulty rising with the round.
+const SLAM_ROUNDS = ["R128", "R64", "R32", "R16", "QF", "SF", "F"];
+const REAL_OPPONENT_ROUNDS = new Set(["QF", "SF", "F"]);
+const SLAM_JOURNEYMAN_BASELINE = { R128: 50, R64: 55, R32: 60, R16: 68 };
+
+export const SLAM_RESULT_POINTS = {
+  R128: 10,
+  R64: 45,
+  R32: 90,
+  R16: 180,
+  QF: 360,
+  SF: 720,
+  F: 1200,
+  W: 2000,
+};
 
 function simulateSlam(attributes, slam, playerPool) {
-  const realOpponents = pickDistinct(playerPool, 3);
+  const realOpponents = pickDistinct(activePlayers(playerPool), 3);
   let realOpponentIndex = 0;
-  const matches = [];
+  let wins = 0;
 
   for (const round of SLAM_ROUNDS) {
-    const opponent = REAL_OPPONENT_ROUNDS.has(round)
-      ? realOpponents[realOpponentIndex++]
-      : generateJourneyman(round);
+    const opponentAttributes = REAL_OPPONENT_ROUNDS.has(round)
+      ? realOpponents[realOpponentIndex++].attributes
+      : generateOpponentAttributes(SLAM_JOURNEYMAN_BASELINE[round]);
 
-    const playerStrength = computeSurfaceStrength(attributes, slam.surface);
-    const opponentStrength = computeSurfaceStrength(opponent.attributes, slam.surface);
-    const winProbability = matchWinProbability(
-      playerStrength,
-      opponentStrength,
-      attributes.mentalToughness,
-      opponent.attributes.mentalToughness
+    if (!rollMatch(attributes, opponentAttributes, slam.surface)) {
+      return {
+        key: slam.key,
+        label: slam.label,
+        surface: slam.surface,
+        result: round,
+        wins,
+      };
+    }
+    wins++;
+  }
+
+  return { key: slam.key, label: slam.label, surface: slam.surface, result: "W", wins };
+}
+
+// ---------- Masters 1000s and the rest of the tour ----------
+//
+// Simulated bracket-by-bracket like the Slams (so win/loss totals and
+// title counts are grounded in the same per-round probability model,
+// not a rough formula), but against generated opposition throughout -
+// no real players, no per-event detail surfaced to the UI, since this
+// is meant to represent the bulk of a season, not individual stories.
+
+const MASTERS_ROUNDS = ["R64", "R32", "R16", "QF", "SF", "F"];
+const MASTERS_BASELINE = { R64: 62, R32: 68, R16: 74, QF: 80, SF: 85, F: 88 };
+const MASTERS_EVENTS_PER_SEASON = 9; // matches the real ATP Masters 1000 calendar
+
+const TOUR_ROUNDS = ["R32", "R16", "QF", "SF", "F"];
+const TOUR_BASELINE = { R32: 55, R16: 62, QF: 68, SF: 74, F: 78 };
+const TOUR_EVENTS_PER_SEASON = 12; // a rough count of 250/500-level events a healthy full season includes
+
+// Rough, simplified surface mix for non-Slam events (real ATP tour skews
+// hard-court-heavy with clay and grass swings) - not an authentic
+// calendar, just enough variety that surface-strong builds still get
+// some benefit outside the Slams.
+const EVENT_SURFACES = ["hard", "hard", "hard", "clay", "clay", "grass"];
+function randomEventSurface() {
+  return EVENT_SURFACES[Math.floor(Math.random() * EVENT_SURFACES.length)];
+}
+
+function simulateBracketEvent(attributes, rounds, baselineByRound) {
+  const surface = randomEventSurface();
+  let wins = 0;
+  for (const round of rounds) {
+    const opponentAttributes = generateOpponentAttributes(baselineByRound[round]);
+    if (!rollMatch(attributes, opponentAttributes, surface)) {
+      return { wins, champion: false };
+    }
+    wins++;
+  }
+  return { wins, champion: true };
+}
+
+function simulateNonSlamSeason(attributes) {
+  let masterTitles = 0;
+  let tourTitles = 0;
+  let wins = 0;
+  let losses = 0;
+  let points = 0;
+
+  for (let i = 0; i < MASTERS_EVENTS_PER_SEASON; i++) {
+    const { wins: eventWins, champion } = simulateBracketEvent(
+      attributes,
+      MASTERS_ROUNDS,
+      MASTERS_BASELINE
     );
-    const won = Math.random() < winProbability;
-    const closeness = 1 - Math.abs(winProbability - 0.5) * 2;
-
-    matches.push({
-      round,
-      opponentName: opponent.name,
-      won,
-      score: generateScoreLine(closeness),
-    });
-
-    if (!won) break;
+    wins += eventWins;
+    points += eventWins * 15 + (champion ? 400 : 0);
+    if (champion) masterTitles++;
+    else losses++;
   }
 
-  const lastMatch = matches[matches.length - 1];
-  const result = lastMatch.won ? "W" : lastMatch.round;
-
-  return { key: slam.key, label: slam.label, surface: slam.surface, matches, result };
-}
-
-// ---------- Rest of tour (aggregate, no per-match detail) ----------
-
-function simulateTourAggregate(overall) {
-  const titleProbabilityPerEvent = clamp((overall - 60) / 120, 0.02, 0.35);
-  const eventsEntered = 18; // rough count of non-Slam events entered in a season
-  let titles = 0;
-  for (let i = 0; i < eventsEntered; i++) {
-    if (Math.random() < titleProbabilityPerEvent) titles++;
+  for (let i = 0; i < TOUR_EVENTS_PER_SEASON; i++) {
+    const { wins: eventWins, champion } = simulateBracketEvent(
+      attributes,
+      TOUR_ROUNDS,
+      TOUR_BASELINE
+    );
+    wins += eventWins;
+    points += eventWins * 8 + (champion ? 150 : 0);
+    if (champion) tourTitles++;
+    else losses++;
   }
 
-  const matchesPlayed = 35 + Math.round(Math.random() * 15);
-  const winRate = clamp(0.35 + (overall - 65) / 90, 0.15, 0.85);
-  const wins = Math.round(matchesPlayed * winRate);
-  const losses = Math.max(0, matchesPlayed - wins);
-
-  return { titles, wins, losses };
-}
-
-function tourAggregatePoints(tourResult) {
-  return tourResult.titles * 300 + tourResult.wins * 8;
+  return { masterTitles, tourTitles, wins, losses, points };
 }
 
 // ---------- Ranking model ----------
@@ -286,8 +304,9 @@ export function createCareerState(baseAttributes) {
  * Simulates one more season and appends it to the career. Applies this
  * season's age factor (and any injury) to the build's base attributes to
  * get that season's effective strength, plays out all 4 Grand Slams plus
- * an aggregate tour result, derives a season-ending ranking from the
- * points earned, then rolls whether next season happens at all.
+ * the Masters/tour bracket sweep, combines everything into one accurate
+ * season win/loss record and points total, derives a ranking, then rolls
+ * whether next season happens at all.
  */
 export function simulateNextSeason(state, playerPool) {
   if (state.retired) {
@@ -307,11 +326,17 @@ export function simulateNextSeason(state, playerPool) {
   const slams = SLAM_CALENDAR.map((slam) =>
     simulateSlam(seasonAttributes, slam, playerPool)
   );
-  const tour = simulateTourAggregate(computeOverall(seasonAttributes));
+  const nonSlam = simulateNonSlamSeason(seasonAttributes);
 
-  const seasonPoints =
-    slams.reduce((sum, slam) => sum + SLAM_RESULT_POINTS[slam.result], 0) +
-    tourAggregatePoints(tour);
+  const slamWins = slams.reduce((sum, slam) => sum + slam.wins, 0);
+  const slamLosses = slams.reduce((sum, slam) => sum + (slam.result === "W" ? 0 : 1), 0);
+  const slamTitles = slams.filter((slam) => slam.result === "W").length;
+  const slamPoints = slams.reduce(
+    (sum, slam) => sum + SLAM_RESULT_POINTS[slam.result],
+    0
+  );
+
+  const seasonPoints = slamPoints + nonSlam.points;
   const ranking = pointsToRanking(seasonPoints);
 
   const season = {
@@ -320,7 +345,10 @@ export function simulateNextSeason(state, playerPool) {
     ageFactor: factor,
     injury,
     slams,
-    tour,
+    slamTitles,
+    masterTitles: nonSlam.masterTitles,
+    tourTitles: nonSlam.tourTitles,
+    record: { wins: slamWins + nonSlam.wins, losses: slamLosses + nonSlam.losses },
     seasonPoints,
     ranking,
   };
@@ -337,18 +365,19 @@ export function simulateNextSeason(state, playerPool) {
 
 /** Aggregate career totals derived from the seasons played so far. */
 export function summarizeCareer(state) {
-  let titles = 0;
   let slamTitles = 0;
+  let masterTitles = 0;
+  let tourTitles = 0;
+  let wins = 0;
+  let losses = 0;
   let peakRanking = null;
 
   for (const season of state.seasons) {
-    titles += season.tour.titles;
-    for (const slam of season.slams) {
-      if (slam.result === "W") {
-        titles++;
-        slamTitles++;
-      }
-    }
+    slamTitles += season.slamTitles;
+    masterTitles += season.masterTitles;
+    tourTitles += season.tourTitles;
+    wins += season.record.wins;
+    losses += season.record.losses;
     if (peakRanking === null || season.ranking < peakRanking) {
       peakRanking = season.ranking;
     }
@@ -358,8 +387,11 @@ export function summarizeCareer(state) {
 
   return {
     seasonsPlayed: state.seasons.length,
-    titles,
+    titles: slamTitles + masterTitles + tourTitles,
     slamTitles,
+    masterTitles,
+    tourTitles,
+    careerRecord: { wins, losses },
     peakRanking,
     retired: state.retired,
     retirementAge: state.retired && lastSeason ? lastSeason.age : null,

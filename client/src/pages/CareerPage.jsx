@@ -24,19 +24,16 @@ const RESULT_LABEL = {
   W: "Champion",
 };
 
+// No opponent is ever named here - a Slam result is shown as just the
+// round reached. Naming a specific real player as "beaten" every year
+// across a decade-plus simulated career would imply they're frozen in
+// time rather than aging themselves, which the simulation has no way to
+// represent - see career.js's design notes.
 function SlamBadge({ slam }) {
-  const notableWins = slam.matches.filter(
-    (m) => m.won && (m.round === "QF" || m.round === "SF" || m.round === "F")
-  );
   return (
     <div className={`slam-badge result-${slam.result}`}>
       <span className="slam-badge-name">{SLAM_SHORT_LABEL[slam.key]}</span>
       <span className="slam-badge-result">{RESULT_LABEL[slam.result]}</span>
-      {notableWins.length > 0 && (
-        <span className="slam-badge-wins">
-          def. {notableWins.map((m) => m.opponentName).join(", ")}
-        </span>
-      )}
     </div>
   );
 }
@@ -55,8 +52,9 @@ function SeasonCard({ season }) {
         ))}
       </div>
       <p className="season-tour-line">
-        Tour: {season.tour.titles} title{season.tour.titles === 1 ? "" : "s"} ·{" "}
-        {season.tour.wins}-{season.tour.losses}
+        {season.masterTitles} Masters · {season.tourTitles} tour title
+        {season.tourTitles === 1 ? "" : "s"} · Record: {season.record.wins}-
+        {season.record.losses}
       </p>
       {season.injury && <p className="season-injury">🩹 {season.injury.description}</p>}
     </div>
@@ -120,20 +118,26 @@ export default function CareerPage() {
           <h2>Career Totals</h2>
           <div className="career-summary-grid">
             <div>
-              <strong>{summary.titles}</strong>
-              <span>Career Titles</span>
-            </div>
-            <div>
               <strong>{summary.slamTitles}</strong>
               <span>Grand Slams</span>
+            </div>
+            <div>
+              <strong>{summary.masterTitles}</strong>
+              <span>Masters Titles</span>
+            </div>
+            <div>
+              <strong>{summary.titles}</strong>
+              <span>Career Titles</span>
             </div>
             <div>
               <strong>#{summary.peakRanking}</strong>
               <span>Peak Ranking</span>
             </div>
             <div>
-              <strong>{summary.seasonsPlayed}</strong>
-              <span>Seasons Played</span>
+              <strong>
+                {summary.careerRecord.wins}-{summary.careerRecord.losses}
+              </strong>
+              <span>Career Record</span>
             </div>
             <div>
               <strong>{summary.retirementAge}</strong>

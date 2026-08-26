@@ -763,11 +763,6 @@ button {
   color: var(--muted);
 }
 
-.slam-badge-wins {
-  font-size: 0.7rem;
-  color: var(--ball);
-}
-
 .slam-badge.result-W {
   border-left-color: var(--tier-legend);
 }

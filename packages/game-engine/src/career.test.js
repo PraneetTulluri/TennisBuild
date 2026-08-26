@@ -24,6 +24,7 @@ function fakePlayer(overrides = {}) {
   return {
     name: "Fake Player",
     slug: `fake-${Math.random()}`,
+    careerStatus: "active",
     attributes: {
       forehand: 70,
       backhand: 70,
@@ -38,7 +39,8 @@ function fakePlayer(overrides = {}) {
   };
 }
 
-// pickDistinct needs at least 3 players to draw QF/SF/F opponents from.
+// pickDistinct needs at least 3 active players to draw Slam QF/SF/F
+// opponents from.
 const FAKE_POOL = [fakePlayer(), fakePlayer(), fakePlayer(), fakePlayer(), fakePlayer()];
 
 describe("ageFactor", () => {
@@ -93,7 +95,7 @@ describe("createCareerState", () => {
 });
 
 describe("simulateNextSeason", () => {
-  it("produces a season with all 4 Grand Slams, a tour result, and a ranking", () => {
+  it("produces a season with all 4 Grand Slams, an accurate combined record, and a ranking", () => {
     const state = createCareerState(STRONG_ATTRIBUTES);
     const next = simulateNextSeason(state, FAKE_POOL);
 
@@ -101,22 +103,35 @@ describe("simulateNextSeason", () => {
     const season = next.seasons[0];
     expect(season.slams).toHaveLength(SLAM_CALENDAR.length);
     expect(season.slams.map((s) => s.key)).toEqual(SLAM_CALENDAR.map((s) => s.key));
-    expect(typeof season.tour.titles).toBe("number");
+    expect(typeof season.masterTitles).toBe("number");
+    expect(typeof season.tourTitles).toBe("number");
+    expect(season.record.wins).toBeGreaterThan(0);
+    expect(season.record.losses).toBeGreaterThan(0);
     expect(season.ranking).toBeGreaterThanOrEqual(1);
     expect(next.age).toBe(19);
   });
 
-  it("every slam's match list stops at the first loss (or goes all 7 rounds if champion)", () => {
+  it("a full healthy season produces a realistic number of total matches (not a handful)", () => {
+    // With 9 Masters + 12 tour events + up to 4 Slam runs all contributing
+    // real per-round win/loss rolls, a season's total matches should land
+    // well above the old flat ~35-50 formula this replaced - real tour
+    // pros playing a full healthy season are typically in the 50-90 match
+    // range.
+    const state = createCareerState(STRONG_ATTRIBUTES);
+    const next = simulateNextSeason(state, FAKE_POOL);
+    const season = next.seasons[0];
+    const totalMatches = season.record.wins + season.record.losses;
+    expect(totalMatches).toBeGreaterThanOrEqual(30);
+  });
+
+  it("every slam stops advancing at the first loss (or reaches 7 wins if champion)", () => {
     const state = createCareerState(STRONG_ATTRIBUTES);
     const next = simulateNextSeason(state, FAKE_POOL);
     for (const slam of next.seasons[0].slams) {
-      const lastMatch = slam.matches[slam.matches.length - 1];
       if (slam.result === "W") {
-        expect(slam.matches).toHaveLength(7);
-        expect(lastMatch.won).toBe(true);
+        expect(slam.wins).toBe(7);
       } else {
-        expect(lastMatch.won).toBe(false);
-        expect(lastMatch.round).toBe(slam.result);
+        expect(slam.wins).toBeLessThan(7);
       }
     }
   });
@@ -128,34 +143,28 @@ describe("simulateNextSeason", () => {
 });
 
 describe("summarizeCareer", () => {
-  it("sums titles (tour + Slam wins) and tracks peak (lowest) ranking across seasons", () => {
+  it("sums Slam/Masters/tour titles separately and tracks career record and peak ranking", () => {
     const state = {
       baseAttributes: STRONG_ATTRIBUTES,
-      age: 25,
+      age: 22,
       retired: true,
       seasons: [
         {
           year: 1,
           age: 20,
-          tour: { titles: 1, wins: 30, losses: 10 },
-          slams: [
-            { key: "australianOpen", result: "QF" },
-            { key: "frenchOpen", result: "W" },
-            { key: "wimbledon", result: "R32" },
-            { key: "usOpen", result: "SF" },
-          ],
+          slamTitles: 1,
+          masterTitles: 2,
+          tourTitles: 3,
+          record: { wins: 60, losses: 20 },
           ranking: 12,
         },
         {
           year: 2,
           age: 21,
-          tour: { titles: 2, wins: 35, losses: 8 },
-          slams: [
-            { key: "australianOpen", result: "F" },
-            { key: "frenchOpen", result: "W" },
-            { key: "wimbledon", result: "QF" },
-            { key: "usOpen", result: "R16" },
-          ],
+          slamTitles: 2,
+          masterTitles: 3,
+          tourTitles: 1,
+          record: { wins: 68, losses: 15 },
           ranking: 3,
         },
       ],
@@ -163,8 +172,11 @@ describe("summarizeCareer", () => {
 
     const summary = summarizeCareer(state);
     expect(summary.seasonsPlayed).toBe(2);
-    expect(summary.titles).toBe(1 + 2 + 2); // tour titles (1+2) + 2 Slam wins
-    expect(summary.slamTitles).toBe(2);
+    expect(summary.slamTitles).toBe(3);
+    expect(summary.masterTitles).toBe(5);
+    expect(summary.tourTitles).toBe(4);
+    expect(summary.titles).toBe(3 + 5 + 4);
+    expect(summary.careerRecord).toEqual({ wins: 128, losses: 35 });
     expect(summary.peakRanking).toBe(3);
     expect(summary.retirementAge).toBe(21); // age of the last season played
   });
