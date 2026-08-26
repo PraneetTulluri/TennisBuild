@@ -11,13 +11,18 @@ import { ATTRIBUTE_KEYS } from "@tennisbuild/game-engine";
 // instead of writing out 8 near-identical field definitions by hand -
 // this also means adding/removing an attribute later is a one-line change
 // in ATTRIBUTE_KEYS rather than an easy-to-miss edit in multiple places.
+// The scale is 1-99 for almost everyone, but a small handful of the most
+// iconic legends have one signature attribute pushed past the normal
+// ceiling (up to 105) - representing a skill so exceptional that even a
+// "perfect 99" undersells it (see RATINGS_METHODOLOGY.md). This is
+// deliberately rare - most players still cap at 99.
 const attributeFields = {};
 for (const key of ATTRIBUTE_KEYS) {
   attributeFields[key] = {
     type: Number,
     required: true,
     min: 1,
-    max: 99,
+    max: 105,
   };
 }
 

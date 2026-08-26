@@ -66,7 +66,9 @@ export default function ResultPage() {
     <div className="result-page">
       <p className="result-kicker">Your Custom Player</p>
       <div className="result-overall-block">
-        <span className="result-overall">{derived.overall}</span>
+        <span className={`result-overall${derived.overall > 99 ? " elite-value" : ""}`}>
+          {derived.overall}
+        </span>
         <span className="result-archetype">{derived.archetype.label}</span>
       </div>
 
@@ -87,7 +89,9 @@ export default function ResultPage() {
             {ATTRIBUTE_KEYS.map((key) => (
               <li key={key}>
                 <span className="result-attr-label">{ATTRIBUTE_LABELS[key]}</span>
-                <strong>{attributes[key]}</strong>
+                <strong className={attributes[key] > 99 ? "elite-value" : ""}>
+                  {attributes[key]}
+                </strong>
                 <em>via {locked[key].fromPlayerName}</em>
               </li>
             ))}
@@ -99,7 +103,8 @@ export default function ResultPage() {
           <ul className="result-tag-list strengths">
             {derived.strengths.map((s) => (
               <li key={s.key}>
-                {ATTRIBUTE_LABELS[s.key]} <strong>{s.value}</strong>
+                {ATTRIBUTE_LABELS[s.key]}{" "}
+                <strong className={s.value > 99 ? "elite-value" : ""}>{s.value}</strong>
               </li>
             ))}
           </ul>

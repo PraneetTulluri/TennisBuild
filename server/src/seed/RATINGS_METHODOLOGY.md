@@ -8,13 +8,19 @@ data. This is intentional (see the Phase 0 design doc's balancing notes):
 the goal is a roster that _feels_ realistic and produces meaningful
 tradeoffs when drafted, not a sports-analytics dataset.
 
-## Scale calibration (1-99)
+## Scale calibration (1-99, with rare exceptions above 99)
 
 - **~65-70**: an average tour-level professional in that category
 - **~85-90**: a genuine strength / weapon for that player
 - **~90-97**: a career-defining elite skill, among the best of their era
-- **~98-99**: reserved for a small handful of all-time-best-ever-at-that-skill
-  cases (e.g. Sampras's serve, Djokovic's return)
+- **~98-99**: an all-time-best-ever-at-that-skill case
+- **100-105**: reserved for a small handful of legends whose signature skill
+  is so exceptional that even a "perfect 99" undersells it - Federer's
+  forehand, Nadal's mental toughness, Djokovic's return, Sampras's serve,
+  McEnroe's volley, Agassi's return. Deliberately rare (6 attributes across
+  the whole roster as of this writing) so it stays special rather than
+  becoming a second ceiling everyone eventually hits - most players,
+  including most legends, still cap at 99.
 - **Below 60**: a real, known weakness relative to tour average — reserved
   for players whose game genuinely has that gap (this is what keeps the
   roster from clustering near the top of the scale; see Phase 0's balancing

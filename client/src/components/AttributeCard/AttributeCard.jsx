@@ -37,7 +37,11 @@ export default function AttributeCard({
                 className="attribute-pick-button"
               >
                 <span className="attribute-label">{ATTRIBUTE_LABELS[key]}</span>
-                <span className="attribute-value">{player.attributes[key]}</span>
+                <span
+                  className={`attribute-value${player.attributes[key] > 99 ? " elite-value" : ""}`}
+                >
+                  {player.attributes[key]}
+                </span>
                 {isLocked && <span className="attribute-taken-badge">taken</span>}
               </button>
             </li>

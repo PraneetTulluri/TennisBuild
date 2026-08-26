@@ -32,7 +32,11 @@ function AttributeChip({ attrKey, bodyPart, locked, canPick, onPick }) {
     >
       <span className="model-chip-label">{ATTRIBUTE_LABELS[attrKey]}</span>
       <span className="model-chip-sub">{bodyPart}</span>
-      <span className="model-chip-value">{isLocked ? entry.value : "–"}</span>
+      <span
+        className={`model-chip-value${isLocked && entry.value > 99 ? " elite-value" : ""}`}
+      >
+        {isLocked ? entry.value : "–"}
+      </span>
     </button>
   );
 }

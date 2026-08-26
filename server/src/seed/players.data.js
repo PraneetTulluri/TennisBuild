@@ -29,7 +29,7 @@ export const playersSeedData = [
     careerStatus: "legend",
     tier: "legend",
     attributes: {
-      forehand: 97,
+      forehand: 101,
       backhand: 88,
       serve: 92,
       return: 85,
@@ -39,7 +39,8 @@ export const playersSeedData = [
       mentalToughness: 90,
     },
     flavorText: {
-      forehand: "One of the most elegant and lethal forehands the sport has seen.",
+      forehand:
+        "Widely considered the single greatest forehand the sport has ever produced - off the charts.",
       volley: "Surgical touch at net, a throwback to serve-and-volley eras.",
     },
     bio: "Swiss all-time great known for effortless shot-making and net play.",
@@ -61,11 +62,12 @@ export const playersSeedData = [
       volley: 78,
       movement: 97,
       power: 90,
-      mentalToughness: 98,
+      mentalToughness: 104,
     },
     flavorText: {
       movement: "Relentless court coverage, especially on clay.",
-      mentalToughness: "Famously unbreakable competitor in tight matches.",
+      mentalToughness:
+        "The most mentally unbreakable competitor the sport has seen - off the charts.",
     },
     bio: "Spanish legend, the most dominant clay-court player in history.",
     imageUrl: "https://a.espncdn.com/i/headshots/tennis/players/full/261.png",
@@ -82,14 +84,14 @@ export const playersSeedData = [
       forehand: 91,
       backhand: 96,
       serve: 88,
-      return: 97,
+      return: 102,
       volley: 80,
       movement: 96,
       power: 85,
       mentalToughness: 97,
     },
     flavorText: {
-      return: "Widely regarded as the best returner of serve of all time.",
+      return: "The greatest returner of serve the sport has ever seen - off the charts.",
       backhand: "A rock-solid two-handed backhand that rarely breaks down.",
     },
     bio: "Serbian great known for elite defense, return of serve, and mental resilience.",
@@ -106,7 +108,7 @@ export const playersSeedData = [
     attributes: {
       forehand: 88,
       backhand: 75,
-      serve: 98,
+      serve: 103,
       return: 68,
       volley: 95,
       movement: 82,
@@ -114,7 +116,7 @@ export const playersSeedData = [
       mentalToughness: 92,
     },
     flavorText: {
-      serve: "Arguably the greatest serve of all time, a weapon on every surface.",
+      serve: "Arguably the greatest serve of all time on any surface - off the charts.",
       volley: "Textbook serve-and-volley technique.",
     },
     bio: "American serve-and-volley great, 14 Grand Slams and dominant on grass.",
@@ -131,14 +133,15 @@ export const playersSeedData = [
       forehand: 92,
       backhand: 90,
       serve: 78,
-      return: 97,
+      return: 100,
       volley: 70,
       movement: 85,
       power: 87,
       mentalToughness: 88,
     },
     flavorText: {
-      return: "Legendary return of serve that redefined aggressive returning.",
+      return:
+        "Legendary return of serve that redefined aggressive returning - off the charts.",
       backhand: "Flat, piercing two-handed backhand.",
     },
     bio: "American baseline great known for taking the ball early and an elite return.",
@@ -205,14 +208,13 @@ export const playersSeedData = [
       backhand: 84,
       serve: 85,
       return: 82,
-      volley: 97,
+      volley: 101,
       movement: 83,
       power: 65,
       mentalToughness: 80,
     },
     flavorText: {
-      volley:
-        "Widely regarded as having the best hands and touch at net in tennis history.",
+      volley: "The best hands and touch at net the sport has ever seen - off the charts.",
     },
     bio: "American serve-and-volley genius with the greatest touch of his generation.",
   },

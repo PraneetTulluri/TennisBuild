@@ -558,6 +558,15 @@ button {
   font-size: 0.85rem;
 }
 
+/* An attribute rating above the normal 99 ceiling - reserved for a small
+   handful of legends' signature skills (see RATINGS_METHODOLOGY.md).
+   Gets a gold glow wherever a raw value is shown, so it reads as "off the
+   charts" rather than just a slightly bigger number. */
+.elite-value {
+  color: var(--tier-legend);
+  text-shadow: 0 0 8px rgba(233, 194, 95, 0.6);
+}
+
 /* ---------- Result page ---------- */
 .result-page {
   max-width: 720px;
@@ -803,6 +812,37 @@ button {
   flex-direction: column;
   align-items: center;
   gap: 20px;
+}
+
+.goat-block {
+  text-align: center;
+  padding-bottom: 16px;
+  border-bottom: 1px dashed var(--ink-panel-light);
+  width: 100%;
+}
+
+.goat-rank {
+  font-family: var(--font-display);
+  font-size: 2.6rem;
+  color: var(--tier-legend);
+  text-shadow: 0 0 10px rgba(233, 194, 95, 0.5);
+  margin: 4px 0;
+}
+
+.goat-rank span {
+  font-size: 1.1rem;
+  color: var(--muted);
+  text-shadow: none;
+}
+
+.goat-context {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.goat-context strong {
+  color: var(--paper);
 }
 
 .career-summary-grid {
