@@ -18,11 +18,22 @@ export default function DraftPage() {
       .catch((err) => setError(err.message));
   }, []);
 
-  const { state, spinning, targetPlayer, spin, handleSpinComplete, pick } =
-    useDraftState(players);
+  const {
+    state,
+    spinning,
+    targetPlayer,
+    targetNeighbors,
+    spin,
+    handleSpinComplete,
+    pick,
+    respin,
+    snag,
+  } = useDraftState(players);
 
   const complete = isDraftComplete(state);
+  const revealed = state.phase === "revealed" && state.revealedPlayer;
   const canSpin = !spinning && state.phase === "idle" && !complete && players.length > 0;
+  const canRespin = !spinning && revealed && state.respinsRemaining > 0;
 
   if (error) {
     return (
@@ -46,6 +57,10 @@ export default function DraftPage() {
             />
           ))}
         </div>
+        <div className="draft-charges">
+          <span>🔄 Respin ×{state.respinsRemaining}</span>
+          <span>🤝 Snag ×{state.snagsRemaining}</span>
+        </div>
       </div>
 
       {players.length === 0 && !error && <p>Loading players…</p>}
@@ -55,24 +70,38 @@ export default function DraftPage() {
           <Wheel
             players={players}
             targetPlayer={targetPlayer}
+            targetNeighbors={targetNeighbors}
             spinning={spinning}
             onSpinComplete={handleSpinComplete}
           />
 
-          <button
-            type="button"
-            className="spin-button"
-            disabled={!canSpin}
-            onClick={spin}
-          >
-            {complete ? "Draft Complete" : spinning ? "Spinning…" : "SPIN"}
-          </button>
+          <div className="draft-actions">
+            <button
+              type="button"
+              className="spin-button"
+              disabled={!canSpin}
+              onClick={spin}
+            >
+              {complete ? "Draft Complete" : spinning ? "Spinning…" : "SPIN"}
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={!canRespin}
+              onClick={respin}
+            >
+              Respin ({state.respinsRemaining} left)
+            </button>
+          </div>
 
-          {state.phase === "revealed" && state.revealedPlayer && (
+          {revealed && (
             <AttributeCard
               player={state.revealedPlayer}
               locked={state.locked}
               onPick={pick}
+              neighbors={state.revealedNeighbors}
+              snagsRemaining={state.snagsRemaining}
+              onSnag={snag}
             />
           )}
 

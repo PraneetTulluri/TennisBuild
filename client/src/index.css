@@ -155,6 +155,41 @@ button {
   border-color: var(--ball);
 }
 
+.draft-charges {
+  display: flex;
+  gap: 16px;
+  font-size: 0.75rem;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.draft-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.secondary-button {
+  background: transparent;
+  color: var(--paper);
+  border: 1px solid var(--muted);
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.secondary-button:not(:disabled):hover {
+  border-color: var(--ball);
+  color: var(--ball);
+}
+
+.secondary-button:disabled {
+  color: var(--muted);
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ---------- Wheel spin strip ---------- */
 .wheel {
   position: relative;
@@ -192,6 +227,15 @@ button {
 
 .wheel-card {
   flex: 0 0 140px;
+}
+
+.wheel-card.landed .player-card {
+  box-shadow: 0 0 0 3px var(--ball);
+}
+
+.wheel-card.neighbor .player-card {
+  box-shadow: 0 0 0 2px var(--clay-orange);
+  opacity: 0.85;
 }
 
 /* ---------- Player card ---------- */
@@ -317,6 +361,44 @@ button {
   font-size: 0.6rem;
   text-transform: uppercase;
   color: var(--muted);
+}
+
+.snag-panel {
+  width: 100%;
+  max-width: 420px;
+  border-top: 1px dashed var(--ink-panel-light);
+  padding-top: 12px;
+  text-align: center;
+}
+
+.snag-panel-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+
+.snag-options {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+.snag-option {
+  background: transparent;
+  border: 1px dashed var(--clay-orange);
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--clay-orange);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.snag-option:hover {
+  background: rgba(193, 84, 28, 0.15);
 }
 
 /* ---------- Player model (silhouette + chips) ---------- */

@@ -16,3 +16,29 @@ export function pickRandom(items) {
   const index = Math.floor(Math.random() * items.length);
   return items[index];
 }
+
+/**
+ * Picks `count` distinct random elements from an array (no duplicates
+ * among the results), order not meaningful. Used to draw a spin's target
+ * player plus its two flanking "snag" neighbors as three different people.
+ *
+ * @param {Array} items - the pool to pick from
+ * @param {number} count - how many distinct items to pick
+ * @returns {Array} `count` distinct elements from items
+ */
+export function pickDistinct(items, count) {
+  if (!Array.isArray(items) || count > items.length) {
+    throw new Error(
+      `Cannot pick ${count} distinct items from a pool of ${items?.length ?? 0}`
+    );
+  }
+  const chosen = [];
+  const usedIndices = new Set();
+  while (chosen.length < count) {
+    const index = Math.floor(Math.random() * items.length);
+    if (usedIndices.has(index)) continue;
+    usedIndices.add(index);
+    chosen.push(items[index]);
+  }
+  return chosen;
+}

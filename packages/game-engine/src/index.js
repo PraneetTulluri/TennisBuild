@@ -3,12 +3,14 @@
 // "@tennisbuild/game-engine"`) rather than reaching into individual files,
 // so internal reorganization of this package never breaks its consumers.
 
-export { pickRandom } from "./wheel.js";
+export { pickRandom, pickDistinct } from "./wheel.js";
 export { ATTRIBUTE_KEYS, ATTRIBUTE_LABELS } from "./attributes.js";
 export {
   createDraftState,
   revealPlayer,
   pickAttribute,
+  spendRespin,
+  spendSnag,
   getUnlockedAttributeKeys,
   isDraftComplete,
 } from "./draft.js";

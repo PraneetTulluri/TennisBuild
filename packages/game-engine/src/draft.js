@@ -23,17 +23,23 @@ export function createDraftState(attributeKeys = ATTRIBUTE_KEYS) {
     phase: "idle", // "idle" -> "revealed" -> "idle" (repeat) -> "complete"
     locked,
     revealedPlayer: null,
+    // The two players flanking the landed one, when the caller supplies
+    // them (see revealPlayer) - what spendSnag swaps revealedPlayer to.
+    revealedNeighbors: null, // { left, right } | null
+    respinsRemaining: 1,
+    snagsRemaining: 1,
     history: [],
   };
 }
 
 /**
  * Records the result of a wheel spin: the given player is now revealed,
- * awaiting an attribute pick. The random draw itself (e.g. pickRandom from
- * wheel.js over the player pool) happens in the caller - this function
- * only records the outcome.
+ * awaiting an attribute pick. The random draw itself (e.g. pickRandom/
+ * pickDistinct from wheel.js over the player pool) happens in the caller -
+ * this function only records the outcome. `neighbors`, if supplied, are
+ * the two players flanking the landed one - what a snag can swap to.
  */
-export function revealPlayer(state, player) {
+export function revealPlayer(state, player, neighbors = null) {
   if (state.phase !== "idle") {
     throw new Error(
       `Cannot reveal a player while phase is "${state.phase}" (expected "idle")`
@@ -43,6 +49,58 @@ export function revealPlayer(state, player) {
     ...state,
     phase: "revealed",
     revealedPlayer: player,
+    revealedNeighbors: neighbors,
+  };
+}
+
+/**
+ * Spends the one-per-build respin: discards the current reveal and drops
+ * back to "idle" so the caller can immediately spin again for the same
+ * round (the round number doesn't change - a respin re-rolls this round,
+ * it doesn't skip it).
+ */
+export function spendRespin(state) {
+  if (state.phase !== "revealed") {
+    throw new Error("Cannot respin: no player is currently revealed");
+  }
+  if (state.respinsRemaining <= 0) {
+    throw new Error("No respins remaining");
+  }
+  return {
+    ...state,
+    phase: "idle",
+    revealedPlayer: null,
+    revealedNeighbors: null,
+    respinsRemaining: state.respinsRemaining - 1,
+  };
+}
+
+/**
+ * Spends the one-per-build snag: swaps the currently revealed player for
+ * whichever flanking neighbor ("left" or "right") was supplied to
+ * revealPlayer, so the very next pickAttribute drafts from the snagged
+ * player instead. Stays in the "revealed" phase - a snag doesn't cost a
+ * round, it just changes who this round's pick comes from.
+ */
+export function spendSnag(state, side) {
+  if (side !== "left" && side !== "right") {
+    throw new Error(`Invalid snag side: "${side}" (expected "left" or "right")`);
+  }
+  if (state.phase !== "revealed") {
+    throw new Error("Cannot snag: no player is currently revealed");
+  }
+  if (state.snagsRemaining <= 0) {
+    throw new Error("No snags remaining");
+  }
+  const neighbor = state.revealedNeighbors?.[side];
+  if (!neighbor) {
+    throw new Error(`No ${side} neighbor available to snag`);
+  }
+  return {
+    ...state,
+    revealedPlayer: neighbor,
+    revealedNeighbors: null, // spent - no re-snagging this same reveal
+    snagsRemaining: state.snagsRemaining - 1,
   };
 }
 
@@ -75,6 +133,7 @@ export function pickAttribute(state, attributeKey) {
     round: nextRound,
     phase: nextPhase,
     revealedPlayer: null,
+    revealedNeighbors: null,
     locked: {
       ...state.locked,
       [attributeKey]: { value, fromPlayerName: player.name, fromPlayerSlug: player.slug },

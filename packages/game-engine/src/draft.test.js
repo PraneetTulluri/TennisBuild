@@ -3,6 +3,8 @@ import {
   createDraftState,
   revealPlayer,
   pickAttribute,
+  spendRespin,
+  spendSnag,
   getUnlockedAttributeKeys,
   isDraftComplete,
 } from "./draft.js";
@@ -82,6 +84,71 @@ describe("pickAttribute", () => {
     state = pickAttribute(revealPlayer(state, samplePlayer()), "serve");
     expect(isDraftComplete(state)).toBe(true);
     expect(state.round).toBe(3);
+  });
+});
+
+describe("spendRespin", () => {
+  it("discards the reveal, returns to idle, and spends the charge", () => {
+    const state = revealPlayer(createDraftState(TEST_ATTRIBUTES), samplePlayer());
+    const next = spendRespin(state);
+    expect(next.phase).toBe("idle");
+    expect(next.revealedPlayer).toBeNull();
+    expect(next.respinsRemaining).toBe(0);
+    expect(next.round).toBe(1); // respinning doesn't advance the round
+  });
+
+  it("throws when no respins remain", () => {
+    let state = revealPlayer(createDraftState(TEST_ATTRIBUTES), samplePlayer());
+    state = spendRespin(state);
+    state = revealPlayer(state, samplePlayer());
+    expect(() => spendRespin(state)).toThrow();
+  });
+
+  it("throws when no player is revealed", () => {
+    expect(() => spendRespin(createDraftState(TEST_ATTRIBUTES))).toThrow();
+  });
+});
+
+describe("spendSnag", () => {
+  const left = samplePlayer({ name: "Left Neighbor", slug: "left-neighbor" });
+  const right = samplePlayer({ name: "Right Neighbor", slug: "right-neighbor" });
+
+  it("swaps the revealed player to the chosen neighbor and spends the charge", () => {
+    const state = revealPlayer(createDraftState(TEST_ATTRIBUTES), samplePlayer(), {
+      left,
+      right,
+    });
+    const next = spendSnag(state, "right");
+    expect(next.revealedPlayer).toBe(right);
+    expect(next.phase).toBe("revealed"); // snagging doesn't cost a round either
+    expect(next.snagsRemaining).toBe(0);
+    expect(next.revealedNeighbors).toBeNull();
+  });
+
+  it("throws when no snags remain", () => {
+    let state = revealPlayer(createDraftState(TEST_ATTRIBUTES), samplePlayer(), {
+      left,
+      right,
+    });
+    state = spendSnag(state, "left");
+    state = { ...state, revealedNeighbors: { left, right } }; // simulate a later reveal with neighbors
+    expect(() => spendSnag(state, "right")).toThrow();
+  });
+
+  it("throws when the requested side has no neighbor", () => {
+    const state = revealPlayer(createDraftState(TEST_ATTRIBUTES), samplePlayer(), {
+      left,
+      right: null,
+    });
+    expect(() => spendSnag(state, "right")).toThrow();
+  });
+
+  it("throws on an invalid side", () => {
+    const state = revealPlayer(createDraftState(TEST_ATTRIBUTES), samplePlayer(), {
+      left,
+      right,
+    });
+    expect(() => spendSnag(state, "up")).toThrow();
   });
 });
 

@@ -19,13 +19,25 @@ function shuffled(list) {
 
 /**
  * The horizontal "spin the wheel" strip. Doesn't decide *who* gets drawn -
- * the caller already knows that (via pickRandom over the pool) and passes
- * it in as targetPlayer; this component's only job is to animate a
- * convincing spin that lands on it, then report back when settled.
+ * the caller already knows that (via pickDistinct over the pool) and
+ * passes it in as targetPlayer plus its two flanking neighbors; this
+ * component's only job is to animate a convincing spin that lands with
+ * the target centered between those neighbors, then report back when
+ * settled. The neighbors are what a "snag" can swap the pick to (see
+ * AttributeCard.jsx) - showing them physically adjacent in the strip is
+ * what makes "you landed between two players" a real, visible thing
+ * rather than just a hidden data structure.
  */
-export default function Wheel({ players, targetPlayer, spinning, onSpinComplete }) {
+export default function Wheel({
+  players,
+  targetPlayer,
+  targetNeighbors,
+  spinning,
+  onSpinComplete,
+}) {
   const containerRef = useRef(null);
   const [strip, setStrip] = useState(() => players.slice(0, 10));
+  const [landingIndex, setLandingIndex] = useState(-1);
   const [offset, setOffset] = useState(0);
   const [animate, setAnimate] = useState(false);
 
@@ -34,15 +46,25 @@ export default function Wheel({ players, targetPlayer, spinning, onSpinComplete 
 
     const built = [];
     for (let i = 0; i < LOOPS; i++) built.push(...shuffled(players));
-    built.push(targetPlayer);
+
+    // Land with the target flanked by its two neighbors when we have them,
+    // so the spin visibly stops "in between" two other players - what the
+    // snag option lets you grab instead.
+    if (targetNeighbors) {
+      built.push(targetNeighbors.left, targetPlayer, targetNeighbors.right);
+    } else {
+      built.push(targetPlayer);
+    }
+    const newLandingIndex = targetNeighbors ? built.length - 2 : built.length - 1;
 
     setStrip(built);
+    setLandingIndex(newLandingIndex);
     setAnimate(false);
     setOffset(0);
 
     const containerWidth = containerRef.current?.offsetWidth ?? 600;
-    const landingIndex = built.length - 1;
-    const targetOffset = landingIndex * CARD_WIDTH - containerWidth / 2 + CARD_WIDTH / 2;
+    const targetOffset =
+      newLandingIndex * CARD_WIDTH - containerWidth / 2 + CARD_WIDTH / 2;
 
     // A short delay (rather than requestAnimationFrame, which browsers can
     // throttle heavily - even down to a full stop - in backgrounded or
@@ -64,7 +86,7 @@ export default function Wheel({ players, targetPlayer, spinning, onSpinComplete 
       clearTimeout(settleTimer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spinning, targetPlayer]);
+  }, [spinning, targetPlayer, targetNeighbors]);
 
   return (
     <div className="wheel" ref={containerRef}>
@@ -73,11 +95,18 @@ export default function Wheel({ players, targetPlayer, spinning, onSpinComplete 
         className={`wheel-track${animate ? " animate" : ""}`}
         style={{ transform: `translateX(-${offset}px)` }}
       >
-        {strip.map((player, i) => (
-          <div className="wheel-card" key={`${player.slug}-${i}`}>
-            <PlayerCard player={player} />
-          </div>
-        ))}
+        {strip.map((player, i) => {
+          const isLanded = i === landingIndex;
+          const isNeighbor = i === landingIndex - 1 || i === landingIndex + 1;
+          return (
+            <div
+              className={`wheel-card${isLanded ? " landed" : ""}${isNeighbor ? " neighbor" : ""}`}
+              key={`${player.slug}-${i}`}
+            >
+              <PlayerCard player={player} />
+            </div>
+          );
+        })}
       </div>
     </div>
   );

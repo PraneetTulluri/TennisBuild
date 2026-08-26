@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { pickRandom } from "./wheel.js";
+import { pickRandom, pickDistinct } from "./wheel.js";
 
 describe("pickRandom", () => {
   it("returns an element that is actually a member of the input array", () => {
@@ -19,5 +19,25 @@ describe("pickRandom", () => {
       seen.add(pickRandom(items));
     }
     expect(seen.size).toBe(items.length);
+  });
+});
+
+describe("pickDistinct", () => {
+  it("returns the requested number of elements with no duplicates", () => {
+    const items = ["a", "b", "c", "d", "e"];
+    const result = pickDistinct(items, 3);
+    expect(result).toHaveLength(3);
+    expect(new Set(result).size).toBe(3);
+    for (const item of result) expect(items).toContain(item);
+  });
+
+  it("throws rather than looping forever when count exceeds the pool size", () => {
+    expect(() => pickDistinct(["a", "b"], 3)).toThrow();
+  });
+
+  it("can pick every item when count equals the pool size", () => {
+    const items = ["a", "b", "c"];
+    const result = pickDistinct(items, 3);
+    expect(new Set(result)).toEqual(new Set(items));
   });
 });
