@@ -1,9 +1,14 @@
 import { getGuestSessionId } from "../utils/guestSession.js";
 
+// credentials: "include" on every call - when logged in, the server uses
+// the auth cookie to scope/tag builds by account instead of just guest
+// session id (see server/src/routes/builds.js).
+
 export async function saveBuild({ name, locked, flavor }) {
   const response = await fetch("/api/builds", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: JSON.stringify({ name, locked, flavor, guestSessionId: getGuestSessionId() }),
   });
   if (!response.ok) {
@@ -13,7 +18,9 @@ export async function saveBuild({ name, locked, flavor }) {
 }
 
 export async function fetchMyBuilds() {
-  const response = await fetch(`/api/builds?sessionId=${getGuestSessionId()}`);
+  const response = await fetch(`/api/builds?sessionId=${getGuestSessionId()}`, {
+    credentials: "include",
+  });
   if (!response.ok) {
     throw new Error(`Failed to fetch builds: ${response.status}`);
   }
@@ -21,7 +28,7 @@ export async function fetchMyBuilds() {
 }
 
 export async function fetchBuild(id) {
-  const response = await fetch(`/api/builds/${id}`);
+  const response = await fetch(`/api/builds/${id}`, { credentials: "include" });
   if (!response.ok) {
     throw new Error(`Failed to fetch build: ${response.status}`);
   }
@@ -32,6 +39,7 @@ export async function saveCareerToBuild(id, careerData) {
   const response = await fetch(`/api/builds/${id}/career`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: JSON.stringify(careerData),
   });
   if (!response.ok) {

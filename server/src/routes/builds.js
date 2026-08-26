@@ -3,9 +3,11 @@ import { Build } from "../models/Build.js";
 
 const router = Router();
 
-// POST /api/builds - save a finished draft build. No auth yet, so the
-// guestSessionId (a random id the client generates once and keeps in
-// localStorage) is what scopes "my builds" - see client/src/utils/guestSession.js.
+// POST /api/builds - save a finished draft build. Always tagged with the
+// guest session id; also tagged with the logged-in user's id when
+// req.userId is set (see middleware/attachUser.js), so a build saved
+// while logged in belongs to the account right away rather than needing
+// a separate claim step.
 router.post("/", async (req, res) => {
   try {
     const { name, guestSessionId, locked, flavor } = req.body;
@@ -14,7 +16,13 @@ router.post("/", async (req, res) => {
         .status(400)
         .json({ error: "name, guestSessionId, and locked are required" });
     }
-    const build = await Build.create({ name, guestSessionId, locked, flavor });
+    const build = await Build.create({
+      name,
+      guestSessionId,
+      locked,
+      flavor,
+      userId: req.userId ?? undefined,
+    });
     res.status(201).json(build);
   } catch (err) {
     console.error("[routes/builds] Failed to save build:", err);
@@ -22,16 +30,19 @@ router.post("/", async (req, res) => {
   }
 });
 
-// GET /api/builds?sessionId=... - list the builds saved from one guest session, newest first.
+// GET /api/builds?sessionId=... - list saved builds, newest first. When
+// logged in, lists every build tied to the account (across any browser/
+// guest session it was saved from); when not, falls back to the guest
+// session id query param, same as before auth existed.
 router.get("/", async (req, res) => {
   try {
-    const { sessionId } = req.query;
-    if (!sessionId) {
+    const filter = req.userId
+      ? { userId: req.userId }
+      : { guestSessionId: req.query.sessionId };
+    if (!req.userId && !req.query.sessionId) {
       return res.status(400).json({ error: "sessionId query param is required" });
     }
-    const builds = await Build.find({ guestSessionId: sessionId })
-      .sort({ createdAt: -1 })
-      .lean();
+    const builds = await Build.find(filter).sort({ createdAt: -1 }).lean();
     res.json(builds);
   } catch (err) {
     console.error("[routes/builds] Failed to list builds:", err);

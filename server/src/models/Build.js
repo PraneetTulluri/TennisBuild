@@ -26,9 +26,14 @@ for (const key of ATTRIBUTE_KEYS) {
 const buildSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true, maxlength: 40 },
-    // No auth yet (that's a later phase) - a random id generated once per
-    // browser and stored in localStorage is what "my builds" filters by.
+    // Always set (the guest session id generated once per browser and
+    // stored in localStorage - see client/src/utils/guestSession.js),
+    // kept even after a build is claimed by an account so its origin
+    // stays on record. `userId` is only set once someone is logged in
+    // when the build is saved, or if it's claimed afterward via
+    // POST /api/auth/claim-guest-builds.
     guestSessionId: { type: String, required: true, index: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },
     locked: {
       type: new mongoose.Schema(lockedFields, { _id: false }),
       required: true,

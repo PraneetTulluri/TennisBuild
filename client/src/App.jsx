@@ -1,22 +1,31 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import LandingPage from "./pages/LandingPage.jsx";
+import { AuthProvider } from "./context/AuthContext.jsx";
+import Header from "./components/Header/Header.jsx";
+import HomePage from "./pages/HomePage.jsx";
 import DraftPage from "./pages/DraftPage.jsx";
 import ResultPage from "./pages/ResultPage.jsx";
 import CareerPage from "./pages/CareerPage.jsx";
 import MyBuildsPage from "./pages/MyBuildsPage.jsx";
 import SavedBuildPage from "./pages/SavedBuildPage.jsx";
+import LoginPage from "./pages/LoginPage.jsx";
+import RegisterPage from "./pages/RegisterPage.jsx";
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/draft" element={<DraftPage />} />
-        <Route path="/result" element={<ResultPage />} />
-        <Route path="/career" element={<CareerPage />} />
-        <Route path="/builds" element={<MyBuildsPage />} />
-        <Route path="/builds/:id" element={<SavedBuildPage />} />
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Header />
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/draft" element={<DraftPage />} />
+          <Route path="/result" element={<ResultPage />} />
+          <Route path="/career" element={<CareerPage />} />
+          <Route path="/builds" element={<MyBuildsPage />} />
+          <Route path="/builds/:id" element={<SavedBuildPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
