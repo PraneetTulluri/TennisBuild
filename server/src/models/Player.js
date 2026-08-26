@@ -47,8 +47,13 @@ const playerSchema = new mongoose.Schema(
       enum: ["legend", "current", "journeyman"],
       required: true,
     },
+    // Wrapping attributeFields in its own Schema (rather than passing the
+    // plain object directly as `type`) lets us turn off the auto-generated
+    // _id Mongoose otherwise adds to every nested subdocument - we don't
+    // need to address an individual attribute set by its own id, and a
+    // stray _id here was leaking into every /api/players response.
     attributes: {
-      type: attributeFields,
+      type: new mongoose.Schema(attributeFields, { _id: false }),
       required: true,
     },
     flavorText: {
