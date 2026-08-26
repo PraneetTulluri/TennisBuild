@@ -33,3 +33,4 @@ export {
   simulateNextSeason,
   summarizeCareer,
 } from "./career.js";
+export { GOAT_BENCHMARKS, computeGoatScore, computeGoatRanking } from "./goat.js";

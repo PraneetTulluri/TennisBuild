@@ -4,6 +4,7 @@ import {
   createCareerState,
   simulateNextSeason,
   summarizeCareer,
+  computeGoatRanking,
 } from "@tennisbuild/game-engine";
 
 const SLAM_SHORT_LABEL = {
@@ -89,6 +90,7 @@ export default function CareerPage() {
   }
 
   const summary = summarizeCareer(careerState);
+  const goat = careerState.retired ? computeGoatRanking(summary) : null;
 
   return (
     <div className="career-page">
@@ -113,8 +115,26 @@ export default function CareerPage() {
         </button>
       )}
 
-      {careerState.retired && (
+      {careerState.retired && goat && (
         <div className="career-summary">
+          <div className="goat-block">
+            <p className="result-kicker">All-Time Ranking</p>
+            <p className="goat-rank">
+              #{goat.rank} <span>of {goat.total}</span>
+            </p>
+            {goat.above && (
+              <p className="goat-context">
+                Just behind <strong>{goat.above}</strong>
+                {goat.below ? `, just ahead of ${goat.below}` : ""}
+              </p>
+            )}
+            {!goat.above && goat.below && (
+              <p className="goat-context">
+                The greatest of all time - ahead of <strong>{goat.below}</strong>
+              </p>
+            )}
+          </div>
+
           <h2>Career Totals</h2>
           <div className="career-summary-grid">
             <div>
