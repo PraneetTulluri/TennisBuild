@@ -476,6 +476,138 @@ button {
   font-size: 0.85rem;
 }
 
+/* ---------- Result page ---------- */
+.result-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 16px 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.result-kicker {
+  color: var(--ball);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.result-overall-block {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.result-overall {
+  font-family: var(--font-display);
+  font-size: 4.5rem;
+  line-height: 1;
+  color: var(--ball);
+}
+
+.result-archetype {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.result-flavor,
+.result-surface {
+  color: var(--muted);
+  margin: 0;
+}
+
+.result-columns {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+  text-align: left;
+}
+
+.result-panel {
+  background: var(--ink-panel);
+  border: 1px solid var(--ink-panel-light);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.result-panel h2 {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+.result-attr-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.result-attr-list li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 8px;
+  align-items: baseline;
+}
+
+.result-attr-label {
+  font-size: 0.85rem;
+}
+
+.result-attr-list strong {
+  font-family: var(--font-display);
+  color: var(--ball);
+}
+
+.result-attr-list em {
+  grid-column: 1 / -1;
+  font-style: normal;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.result-tag-list {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.result-tag-list li {
+  background: var(--ink-panel-light);
+  border-radius: 8px;
+  padding: 6px 10px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.result-tag-list.strengths li {
+  border-left: 3px solid var(--ball);
+}
+
+.result-tag-list.weaknesses li {
+  border-left: 3px solid var(--clay-orange);
+}
+
+.result-comps {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
 /* ---------- Small screens ---------- */
 @media (max-width: 640px) {
   .player-model {
@@ -492,6 +624,10 @@ button {
   }
 
   .attribute-list {
+    grid-template-columns: 1fr;
+  }
+
+  .result-columns {
     grid-template-columns: 1fr;
   }
 }

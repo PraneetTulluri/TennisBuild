@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ATTRIBUTE_LABELS, isDraftComplete } from "@tennisbuild/game-engine";
 import { fetchPlayers } from "../api/players.js";
 import { useDraftState } from "../state/draftState.js";
@@ -7,6 +8,7 @@ import AttributeCard from "../components/AttributeCard/AttributeCard.jsx";
 import PlayerModel from "../components/PlayerModel/PlayerModel.jsx";
 
 export default function DraftPage() {
+  const navigate = useNavigate();
   const [players, setPlayers] = useState([]);
   const [error, setError] = useState(null);
 
@@ -92,10 +94,21 @@ export default function DraftPage() {
                   </li>
                 ))}
               </ul>
-              <p className="draft-summary-note">
-                Full rated result page (overall, archetype, strengths &amp; weaknesses)
-                coming in Phase 5.
-              </p>
+              <button
+                type="button"
+                className="spin-button"
+                onClick={() =>
+                  navigate("/result", {
+                    state: {
+                      locked: state.locked,
+                      history: state.history,
+                      playerPool: players,
+                    },
+                  })
+                }
+              >
+                See Full Result
+              </button>
             </div>
           )}
         </>

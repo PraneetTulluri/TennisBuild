@@ -12,3 +12,11 @@ export {
   getUnlockedAttributeKeys,
   isDraftComplete,
 } from "./draft.js";
+export { ARCHETYPES, SURFACES } from "./archetypes.js";
+export {
+  computeArchetype,
+  computeBestSurface,
+  computeOverall,
+  computeStrengthsAndWeaknesses,
+  nearestPlayerComps,
+} from "./scoring.js";
