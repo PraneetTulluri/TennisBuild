@@ -9,15 +9,18 @@ const COUNTRY_FLAGS = {
   Brazil: "🇧🇷",
   Bulgaria: "🇧🇬",
   Canada: "🇨🇦",
+  China: "🇨🇳",
   Croatia: "🇭🇷",
   // Czechoslovakia dissolved in 1993 and has no flag of its own anymore;
   // the Czech Republic's flag is the closest modern equivalent.
   Czechoslovakia: "🇨🇿",
+  "Czech Republic": "🇨🇿",
   Denmark: "🇩🇰",
   France: "🇫🇷",
   Germany: "🇩🇪",
   Greece: "🇬🇷",
   Italy: "🇮🇹",
+  Kazakhstan: "🇰🇿",
   Norway: "🇳🇴",
   Poland: "🇵🇱",
   Russia: "🇷🇺",
