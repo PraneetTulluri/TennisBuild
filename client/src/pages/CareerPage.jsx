@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   createCareerState,
@@ -6,6 +6,7 @@ import {
   summarizeCareer,
   computeGoatRanking,
 } from "@tennisbuild/game-engine";
+import { saveCareerToBuild } from "../api/builds.js";
 
 const SLAM_SHORT_LABEL = {
   australianOpen: "Australian Open",
@@ -70,11 +71,39 @@ function SeasonCard({ season }) {
  */
 export default function CareerPage() {
   const location = useLocation();
-  const { attributes, playerPool } = location.state ?? {};
+  const { attributes, playerPool, buildId } = location.state ?? {};
 
   const [careerState, setCareerState] = useState(() =>
     attributes ? createCareerState(attributes) : null
   );
+  const [careerSaveStatus, setCareerSaveStatus] = useState("idle"); // idle | saving | saved | error
+
+  const summary = careerState ? summarizeCareer(careerState) : null;
+  const goat = careerState?.retired && summary ? computeGoatRanking(summary) : null;
+
+  // Once the career ends, automatically attach its result to the saved
+  // build (if this career was launched from one - see ResultPage's Save
+  // Build flow). Runs once per completed career: the [careerState.retired]
+  // dependency only flips false -> true a single time for a given career.
+  useEffect(() => {
+    if (!careerState?.retired || !buildId || !goat || careerSaveStatus !== "idle") return;
+    setCareerSaveStatus("saving");
+    saveCareerToBuild(buildId, {
+      seasonsPlayed: summary.seasonsPlayed,
+      slamTitles: summary.slamTitles,
+      masterTitles: summary.masterTitles,
+      titles: summary.titles,
+      peakRanking: summary.peakRanking,
+      retirementAge: summary.retirementAge,
+      careerRecordWins: summary.careerRecord.wins,
+      careerRecordLosses: summary.careerRecord.losses,
+      goatRank: goat.rank,
+      goatTotal: goat.total,
+    })
+      .then(() => setCareerSaveStatus("saved"))
+      .catch(() => setCareerSaveStatus("error"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [careerState?.retired]);
 
   if (!attributes || !playerPool || !careerState) {
     return (
@@ -88,9 +117,6 @@ export default function CareerPage() {
       </div>
     );
   }
-
-  const summary = summarizeCareer(careerState);
-  const goat = careerState.retired ? computeGoatRanking(summary) : null;
 
   return (
     <div className="career-page">
@@ -164,6 +190,19 @@ export default function CareerPage() {
               <span>Retirement Age</span>
             </div>
           </div>
+
+          {buildId && (
+            <p className="save-confirmation">
+              {careerSaveStatus === "saving" && "Saving career to your build…"}
+              {careerSaveStatus === "saved" && (
+                <>
+                  ✅ Career saved · <Link to="/builds">View My Builds</Link>
+                </>
+              )}
+              {careerSaveStatus === "error" && "Could not save the career result."}
+            </p>
+          )}
+
           <Link to="/draft">
             <button type="button" className="secondary-button">
               Build Another Player

@@ -78,6 +78,19 @@ button {
   margin-bottom: 32px;
 }
 
+.landing-secondary-link {
+  margin-top: 16px;
+  font-size: 0.85rem;
+}
+
+.landing-secondary-link a {
+  color: var(--muted);
+}
+
+.landing-secondary-link a:hover {
+  color: var(--ball);
+}
+
 /* ---------- Shared: spin button ---------- */
 .spin-button {
   background: var(--ball);
@@ -703,6 +716,108 @@ button {
   display: flex;
   gap: 12px;
   margin-top: 8px;
+}
+
+.save-block {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  background: var(--ink-panel);
+  border: 1px dashed var(--ink-panel-light);
+  border-radius: 12px;
+}
+
+.save-name-input {
+  width: 100%;
+  background: var(--ink);
+  border: 1px solid var(--ink-panel-light);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--paper);
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.save-name-input:focus {
+  outline: none;
+  border-color: var(--ball);
+}
+
+.save-confirmation {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.save-confirmation strong {
+  color: var(--ball);
+}
+
+.save-confirmation a {
+  color: var(--ball);
+}
+
+/* ---------- My Builds ---------- */
+.builds-page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 32px 16px 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.builds-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.build-list-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  background: var(--ink-panel);
+  border: 1px solid var(--ink-panel-light);
+  border-radius: 12px;
+  text-align: left;
+  text-decoration: none;
+  color: inherit;
+}
+
+.build-list-card:hover {
+  border-color: var(--ball);
+}
+
+.build-list-overall {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  color: var(--ball);
+  min-width: 48px;
+  text-align: center;
+}
+
+.build-list-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.build-list-info span {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.build-list-info span.build-list-career {
+  color: var(--tier-legend);
 }
 
 /* ---------- Career page ---------- */

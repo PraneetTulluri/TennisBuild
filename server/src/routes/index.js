@@ -1,5 +1,6 @@
 import { Router } from "express";
 import playersRouter from "./players.js";
+import buildsRouter from "./builds.js";
 
 const router = Router();
 
@@ -10,5 +11,6 @@ router.get("/health", (req, res) => {
 });
 
 router.use("/players", playersRouter);
+router.use("/builds", buildsRouter);
 
 export default router;

@@ -35,6 +35,8 @@ export default [
         cancelAnimationFrame: "readonly",
         setTimeout: "readonly",
         clearTimeout: "readonly",
+        localStorage: "readonly",
+        crypto: "readonly",
       },
     },
     rules: {

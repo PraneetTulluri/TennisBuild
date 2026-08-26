@@ -15,6 +15,9 @@ export default function LandingPage() {
             Start Build
           </button>
         </Link>
+        <p className="landing-secondary-link">
+          <Link to="/builds">View My Builds</Link>
+        </p>
       </div>
     </div>
   );

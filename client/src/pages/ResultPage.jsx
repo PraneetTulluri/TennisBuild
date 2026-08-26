@@ -1,31 +1,35 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  ATTRIBUTE_KEYS,
-  ATTRIBUTE_LABELS,
   computeArchetype,
   computeBestSurface,
   computeOverall,
   computeStrengthsAndWeaknesses,
   nearestPlayerComps,
 } from "@tennisbuild/game-engine";
-import PlayerCard from "../components/Wheel/PlayerCard.jsx";
+import BuildResultView from "../components/BuildResultView/BuildResultView.jsx";
+import { saveBuild } from "../api/builds.js";
 
 /**
  * The finished build's result card. Reads the completed draft's data from
  * router state (passed by DraftPage's navigate() call on completion) -
- * there's no backend persistence yet (that's Phase 6), so this only works
- * as the very next screen after finishing a draft, not a durable URL.
+ * this only works as the very next screen after finishing a draft. To
+ * revisit a build later (after saving it), see SavedBuildPage.jsx.
  */
 export default function ResultPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { locked, history, playerPool } = location.state ?? {};
 
+  const [buildName, setBuildName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  const [savedBuild, setSavedBuild] = useState(null);
+
   const attributes = useMemo(() => {
     if (!locked) return null;
     const result = {};
-    for (const key of ATTRIBUTE_KEYS) result[key] = locked[key].value;
+    for (const key of Object.keys(locked)) result[key] = locked[key].value;
     return result;
   }, [locked]);
 
@@ -49,6 +53,28 @@ export default function ResultPage() {
     return playerPool.find((p) => p.slug === firstPickSlug) ?? null;
   }, [history, playerPool]);
 
+  const flavor = basePlayer
+    ? {
+        handedness: basePlayer.handedness,
+        country: basePlayer.country,
+        heightCm: basePlayer.heightCm,
+      }
+    : null;
+
+  async function handleSave() {
+    if (!buildName.trim()) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const build = await saveBuild({ name: buildName.trim(), locked, flavor });
+      setSavedBuild(build);
+    } catch (err) {
+      setSaveError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (!attributes || !derived) {
     return (
       <div className="result-page">
@@ -65,72 +91,47 @@ export default function ResultPage() {
   return (
     <div className="result-page">
       <p className="result-kicker">Your Custom Player</p>
-      <div className="result-overall-block">
-        <span className={`result-overall${derived.overall > 99 ? " elite-value" : ""}`}>
-          {derived.overall}
-        </span>
-        <span className="result-archetype">{derived.archetype.label}</span>
-      </div>
 
-      {basePlayer && (
-        <p className="result-flavor">
-          {basePlayer.handedness === "left" ? "Left-handed" : "Right-handed"} ·{" "}
-          {basePlayer.country} · {basePlayer.heightCm}cm
-        </p>
-      )}
-      <p className="result-surface">
-        Best surface: <strong>{derived.surface.label}</strong>
-      </p>
+      <BuildResultView locked={locked} flavor={flavor} derived={derived} />
 
-      <div className="result-columns">
-        <div className="result-panel">
-          <h2>Attributes</h2>
-          <ul className="result-attr-list">
-            {ATTRIBUTE_KEYS.map((key) => (
-              <li key={key}>
-                <span className="result-attr-label">{ATTRIBUTE_LABELS[key]}</span>
-                <strong className={attributes[key] > 99 ? "elite-value" : ""}>
-                  {attributes[key]}
-                </strong>
-                <em>via {locked[key].fromPlayerName}</em>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="result-panel">
-          <h2>Strengths</h2>
-          <ul className="result-tag-list strengths">
-            {derived.strengths.map((s) => (
-              <li key={s.key}>
-                {ATTRIBUTE_LABELS[s.key]}{" "}
-                <strong className={s.value > 99 ? "elite-value" : ""}>{s.value}</strong>
-              </li>
-            ))}
-          </ul>
-          <h2>Weaknesses</h2>
-          <ul className="result-tag-list weaknesses">
-            {derived.weaknesses.map((w) => (
-              <li key={w.key}>
-                {ATTRIBUTE_LABELS[w.key]} <strong>{w.value}</strong>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
-      <h2>Plays Like</h2>
-      <div className="result-comps">
-        {derived.comps.map((player) => (
-          <PlayerCard key={player.slug} player={player} />
-        ))}
+      <div className="save-block">
+        {!savedBuild ? (
+          <>
+            <input
+              type="text"
+              className="save-name-input"
+              placeholder="Name your player"
+              value={buildName}
+              onChange={(e) => setBuildName(e.target.value)}
+              maxLength={40}
+            />
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={!buildName.trim() || saving}
+              onClick={handleSave}
+            >
+              {saving ? "Saving…" : "Save Build"}
+            </button>
+            {saveError && <p className="draft-error">Could not save: {saveError}</p>}
+          </>
+        ) : (
+          <p className="save-confirmation">
+            ✅ Saved as <strong>{savedBuild.name}</strong> ·{" "}
+            <Link to="/builds">View My Builds</Link>
+          </p>
+        )}
       </div>
 
       <div className="result-actions">
         <button
           type="button"
           className="spin-button"
-          onClick={() => navigate("/career", { state: { attributes, playerPool } })}
+          onClick={() =>
+            navigate("/career", {
+              state: { attributes, playerPool, buildId: savedBuild?._id ?? null },
+            })
+          }
         >
           Simulate Career
         </button>
