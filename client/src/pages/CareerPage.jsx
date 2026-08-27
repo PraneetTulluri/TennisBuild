@@ -5,6 +5,9 @@ import {
   simulateNextSeason,
   summarizeCareer,
   computeGoatRanking,
+  pickCareerDecision,
+  resolveDecisionChoice,
+  SLAM_CALENDAR,
 } from "@tennisbuild/game-engine";
 import { saveCareerToBuild } from "../api/builds.js";
 
@@ -25,6 +28,37 @@ const RESULT_LABEL = {
   F: "Finalist",
   W: "Champion",
 };
+
+// Which surface-color class each Slam's trophy gets - the two hard-court
+// majors deliberately share a color, same as they share a surface.
+const SLAM_TROPHY_SURFACE_CLASS = {
+  australianOpen: "trophy-hard",
+  frenchOpen: "trophy-clay",
+  wimbledon: "trophy-grass",
+  usOpen: "trophy-hard",
+};
+
+// A persistent, always-visible trophy case for the 4 majors - stays put
+// across the whole career instead of scrolling away inside a growing list
+// of past seasons, and its counts tick up live as seasons are simulated.
+// Keying each count by its own value forces React to remount that one
+// number whenever it changes, which is what replays the "pop" animation
+// (see .trophy-count in index.css) exactly when a title is actually won.
+function TrophyCase({ slamTitlesByKey }) {
+  return (
+    <div className="trophy-case">
+      {SLAM_CALENDAR.map((slam) => (
+        <div key={slam.key} className={`trophy ${SLAM_TROPHY_SURFACE_CLASS[slam.key]}`}>
+          <span className="trophy-icon">🏆</span>
+          <span className="trophy-count" key={`${slam.key}-${slamTitlesByKey[slam.key]}`}>
+            {slamTitlesByKey[slam.key]}
+          </span>
+          <span className="trophy-name">{SLAM_SHORT_LABEL[slam.key]}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // No opponent is ever named here - a Slam result is shown as just the
 // round reached. Naming a specific real player as "beaten" every year
@@ -48,6 +82,9 @@ function SeasonCard({ season }) {
         <span>Age {season.age}</span>
         <span>Rank #{season.ranking}</span>
       </div>
+      {season.decisionChoice && (
+        <p className="season-decision-line">📋 {season.decisionChoice}</p>
+      )}
       <div className="slam-grid">
         {season.slams.map((slam) => (
           <SlamBadge key={slam.key} slam={slam} />
@@ -63,11 +100,55 @@ function SeasonCard({ season }) {
   );
 }
 
+// A career decision offered before each season - see CAREER_DECISIONS in
+// career.js for the pool and each option's real numeric tradeoffs. Picking
+// one is what triggers that season's simulation (see handleChooseOption).
+function DecisionPrompt({ decision, onChoose }) {
+  return (
+    <div className="decision-card">
+      <p className="result-kicker">Career Decision</p>
+      <h2 className="decision-prompt">{decision.prompt}</h2>
+      <div className="decision-options">
+        {decision.options.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            className="decision-option"
+            onClick={() => onChoose(option)}
+          >
+            <strong>{option.label}</strong>
+            <span>{option.description}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// A brief, purely-for-feel pause between picking a decision and seeing its
+// season play out (the simulation itself is instant) - matches the same
+// "let the moment breathe" reasoning behind the draft wheel's spin delay.
+function SimulatingIndicator({ age }) {
+  return (
+    <div className="simulating-indicator">
+      <span className="simulating-ball">🎾</span>
+      <p>Simulating age {age}…</p>
+    </div>
+  );
+}
+
 /**
  * Simulates the finished build's career, one season at a time, via the
  * game-engine's createCareerState/simulateNextSeason pure state machine
  * (see career.js) - this component just holds that state in React and
  * renders it, same pattern as useDraftState for the draft itself.
+ *
+ * Unlike a growing list of past-season boxes, the career unfolds inside a
+ * single `.career-stage` panel that swaps between three views - a
+ * decision prompt, a brief "simulating" beat, then that season's result -
+ * with each swap re-triggering a small entrance animation (see the
+ * `key` on .career-stage). The trophy case above it is the one thing that
+ * stays constant across all of that, ticking up as majors are won.
  */
 export default function CareerPage() {
   const location = useLocation();
@@ -76,6 +157,9 @@ export default function CareerPage() {
   const [careerState, setCareerState] = useState(() =>
     attributes ? createCareerState(attributes) : null
   );
+  const [stage, setStage] = useState("decision"); // decision | simulating | result | retired
+  const [pendingDecision, setPendingDecision] = useState(() => pickCareerDecision());
+  const [lastDecisionId, setLastDecisionId] = useState(null);
   const [careerSaveStatus, setCareerSaveStatus] = useState("idle"); // idle | saving | saved | error
 
   const summary = careerState ? summarizeCareer(careerState) : null;
@@ -119,6 +203,24 @@ export default function CareerPage() {
     );
   }
 
+  function handleChooseOption(option) {
+    const resolved = resolveDecisionChoice(pendingDecision, option);
+    setStage("simulating");
+    window.setTimeout(() => {
+      const next = simulateNextSeason(careerState, playerPool, resolved);
+      setCareerState(next);
+      setLastDecisionId(pendingDecision.id);
+      setStage(next.retired ? "retired" : "result");
+    }, 900);
+  }
+
+  function handleContinue() {
+    setPendingDecision(pickCareerDecision(lastDecisionId));
+    setStage("decision");
+  }
+
+  const latestSeason = careerState.seasons[careerState.seasons.length - 1] ?? null;
+
   return (
     <div className="career-page">
       <p className="result-kicker">Career Simulation</p>
@@ -126,23 +228,26 @@ export default function CareerPage() {
         {careerState.retired ? "Career Complete" : `Age ${careerState.age}`}
       </h1>
 
-      <div className="career-log">
-        {careerState.seasons.map((season) => (
-          <SeasonCard key={season.year} season={season} />
-        ))}
+      <TrophyCase slamTitlesByKey={summary.slamTitlesByKey} />
+
+      <div className="career-stage" key={`${stage}-${careerState.seasons.length}`}>
+        {stage === "decision" && (
+          <DecisionPrompt decision={pendingDecision} onChoose={handleChooseOption} />
+        )}
+        {stage === "simulating" && <SimulatingIndicator age={careerState.age} />}
+        {(stage === "result" || stage === "retired") && latestSeason && (
+          <>
+            <SeasonCard season={latestSeason} />
+            {stage === "result" && (
+              <button type="button" className="spin-button" onClick={handleContinue}>
+                Continue to Next Season
+              </button>
+            )}
+          </>
+        )}
       </div>
 
-      {!careerState.retired && (
-        <button
-          type="button"
-          className="spin-button"
-          onClick={() => setCareerState((prev) => simulateNextSeason(prev, playerPool))}
-        >
-          Simulate Next Season
-        </button>
-      )}
-
-      {careerState.retired && goat && (
+      {stage === "retired" && goat && (
         <div className="career-summary">
           <div className="goat-block">
             <p className="result-kicker">All-Time Ranking</p>

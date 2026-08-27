@@ -7,6 +7,9 @@ import {
   simulateNextSeason,
   summarizeCareer,
   SLAM_CALENDAR,
+  CAREER_DECISIONS,
+  pickCareerDecision,
+  resolveDecisionChoice,
 } from "./career.js";
 
 const STRONG_ATTRIBUTES = {
@@ -175,6 +178,12 @@ describe("summarizeCareer", () => {
           tourTitles: 3,
           record: { wins: 60, losses: 20 },
           ranking: 12,
+          slams: [
+            { key: "australianOpen", result: "SF" },
+            { key: "frenchOpen", result: "QF" },
+            { key: "wimbledon", result: "W" },
+            { key: "usOpen", result: "R16" },
+          ],
         },
         {
           year: 2,
@@ -184,6 +193,12 @@ describe("summarizeCareer", () => {
           tourTitles: 1,
           record: { wins: 68, losses: 15 },
           ranking: 3,
+          slams: [
+            { key: "australianOpen", result: "W" },
+            { key: "frenchOpen", result: "SF" },
+            { key: "wimbledon", result: "F" },
+            { key: "usOpen", result: "W" },
+          ],
         },
       ],
     };
@@ -196,6 +211,12 @@ describe("summarizeCareer", () => {
     expect(summary.titles).toBe(3 + 5 + 4);
     expect(summary.careerRecord).toEqual({ wins: 128, losses: 35 });
     expect(summary.peakRanking).toBe(3);
+    expect(summary.slamTitlesByKey).toEqual({
+      australianOpen: 1,
+      frenchOpen: 0,
+      wimbledon: 1,
+      usOpen: 1,
+    });
     expect(summary.retirementAge).toBe(21); // age of the last season played
   });
 
@@ -237,5 +258,48 @@ describe("Slam opponent seeding", () => {
     }
 
     expect(slamTitles).toBeLessThan(6);
+  });
+});
+
+describe("career decisions", () => {
+  it("pickCareerDecision avoids repeating the excluded id when other options exist", () => {
+    for (let i = 0; i < 30; i++) {
+      const decision = pickCareerDecision(CAREER_DECISIONS[0].id);
+      expect(decision.id).not.toBe(CAREER_DECISIONS[0].id);
+    }
+  });
+
+  it("pickCareerDecision returns a decision from the pool when nothing is excluded", () => {
+    const decision = pickCareerDecision();
+    expect(CAREER_DECISIONS.map((d) => d.id)).toContain(decision.id);
+  });
+
+  it("resolveDecisionChoice bundles the chosen option with its parent decision's prompt", () => {
+    const decision = CAREER_DECISIONS[0];
+    const option = decision.options[0];
+    const resolved = resolveDecisionChoice(decision, option);
+    expect(resolved.decisionPrompt).toBe(decision.prompt);
+    expect(resolved.id).toBe(option.id);
+    expect(resolved.attributeDelta).toEqual(option.attributeDelta);
+  });
+
+  it("a chosen decision's attributeDelta and its label/prompt show up on the resulting season", () => {
+    const decision = CAREER_DECISIONS.find((d) => d.id === "preseasonTraining");
+    const option = decision.options.find((o) => o.id === "grind");
+    const resolved = resolveDecisionChoice(decision, option);
+
+    const state = createCareerState(STRONG_ATTRIBUTES);
+    const next = simulateNextSeason(state, FAKE_POOL, resolved);
+    const season = next.seasons[0];
+
+    expect(season.decisionPrompt).toBe(decision.prompt);
+    expect(season.decisionChoice).toBe(option.label);
+  });
+
+  it("omitting a decision leaves season.decisionChoice/decisionPrompt null, unchanged from before decisions existed", () => {
+    const state = createCareerState(STRONG_ATTRIBUTES);
+    const next = simulateNextSeason(state, FAKE_POOL);
+    expect(next.seasons[0].decisionChoice).toBeNull();
+    expect(next.seasons[0].decisionPrompt).toBeNull();
   });
 });

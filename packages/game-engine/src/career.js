@@ -53,13 +53,17 @@ function scaleAttributes(attributes, factor) {
  * careers end at a believable, somewhat random point rather than an
  * arbitrary fixed length.
  */
-export function shouldRetire(age) {
+export function shouldRetire(age, retirementChanceDelta = 0) {
   if (age >= 38) return true;
   if (age < 30) return false;
   const factor = ageFactor(age);
   const baseChance = (age - 30) * 0.05;
   const declineChance = factor < 0.85 ? (1 - factor) * 0.6 : 0;
-  return Math.random() < Math.min(0.92, baseChance + declineChance);
+  const chance = Math.max(
+    0,
+    Math.min(0.92, baseChance + declineChance + retirementChanceDelta)
+  );
+  return Math.random() < chance;
 }
 
 // ---------- Shared match model ----------
@@ -309,11 +313,18 @@ export function pointsToRanking(points) {
  * A small per-season chance of an injury, loosely more likely for
  * high-Power/high-Movement builds (a physically taxing playing style) -
  * a flavor mechanic, not a precise medical model. When it happens, this
- * season's effective attributes take a mild hit.
+ * season's effective attributes take a mild hit. `injuryChanceDelta`
+ * (from a career decision - see CAREER_DECISIONS below) shifts the odds
+ * up or down, clamped so a decision alone can never guarantee or rule out
+ * an injury outright.
  */
-function maybeInjury(attributes) {
+function maybeInjury(attributes, injuryChanceDelta = 0) {
   const intensity = (attributes.power + attributes.movement) / 2;
-  const injuryChance = 0.04 + (intensity / 99) * 0.08;
+  const injuryChance = clamp(
+    0.04 + (intensity / 99) * 0.08 + injuryChanceDelta,
+    0.01,
+    0.6
+  );
   if (Math.random() < injuryChance) {
     return {
       description: "A mid-season injury forced time away from the tour.",
@@ -321,6 +332,217 @@ function maybeInjury(attributes) {
     };
   }
   return null;
+}
+
+// ---------- Career decisions ----------
+//
+// A small, varied pool of offseason/preseason decisions offered before
+// each simulated season - each a binary choice with a real, numeric
+// tradeoff (a small attribute nudge for that season, and/or a shift in
+// this season's injury odds or the next age check's retirement odds),
+// not just flavor text. Only one is offered per season (see
+// pickCareerDecision), so a career of several seasons naturally sees a
+// different mix each time without needing an exhaustive catalog. Several
+// options are deliberately framed as "specialize further" vs. "stay
+// balanced" - a nod to the same specialist-vs-generalist tradeoff the
+// archetype scoring model (see scoring.js/archetypes.js) already builds
+// the whole game around.
+export const CAREER_DECISIONS = [
+  {
+    id: "preseasonTraining",
+    prompt: "Preseason: how do you want to prepare?",
+    options: [
+      {
+        id: "grind",
+        label: "Grind through a punishing fitness block",
+        description: "+3 Power, +2 Movement this season - but a real injury risk.",
+        attributeDelta: { power: 3, movement: 2 },
+        injuryChanceDelta: 0.05,
+      },
+      {
+        id: "measured",
+        label: "Build up gradually and stay healthy",
+        description: "+1 Power, +1 Movement - smaller gains, safer season.",
+        attributeDelta: { power: 1, movement: 1 },
+        injuryChanceDelta: -0.03,
+      },
+    ],
+  },
+  {
+    id: "technicalOverhaul",
+    prompt: "Offseason: what does the coaching team retool?",
+    options: [
+      {
+        id: "groundstrokes",
+        label: "Rebuild the forehand and backhand from scratch",
+        description: "+3 Forehand, +3 Backhand - but -1 Serve while it beds in.",
+        attributeDelta: { forehand: 3, backhand: 3, serve: -1 },
+      },
+      {
+        id: "serve",
+        label: "Leave the strokes alone, sharpen the serve",
+        description: "+3 Serve, no downside - but a smaller total upgrade.",
+        attributeDelta: { serve: 3 },
+      },
+    ],
+  },
+  {
+    id: "newCoach",
+    prompt: "A high-profile coach wants in. Do you make the change?",
+    options: [
+      {
+        id: "hire",
+        label: "Hire the demanding, high-intensity coach",
+        description: "+2 Power, +2 Mental Toughness - but a tougher, riskier program.",
+        attributeDelta: { power: 2, mentalToughness: 2 },
+        injuryChanceDelta: 0.03,
+      },
+      {
+        id: "stay",
+        label: "Stick with your longtime team",
+        description: "No stat change, but the stability lowers retirement risk.",
+        attributeDelta: {},
+        retirementChanceDelta: -0.02,
+      },
+    ],
+  },
+  {
+    id: "sportsPsychologist",
+    prompt: "Your team suggests bringing on a sports psychologist.",
+    options: [
+      {
+        id: "hire",
+        label: "Work with a sports psychologist",
+        description: "+4 Mental Toughness this season.",
+        attributeDelta: { mentalToughness: 4 },
+      },
+      {
+        id: "skip",
+        label: "Skip it, trust your instincts",
+        description: "-1 Mental Toughness - old habits, for better or worse.",
+        attributeDelta: { mentalToughness: -1 },
+      },
+    ],
+  },
+  {
+    id: "schedulePhilosophy",
+    prompt: "How aggressive should this season's schedule be?",
+    options: [
+      {
+        id: "packed",
+        label: "Play a packed schedule to stay sharp",
+        description: "+2 Movement from match toughness - but real fatigue risk.",
+        attributeDelta: { movement: 2 },
+        injuryChanceDelta: 0.06,
+      },
+      {
+        id: "light",
+        label: "Prioritize rest between events",
+        description: "-1 Movement, but noticeably lower injury risk.",
+        attributeDelta: { movement: -1 },
+        injuryChanceDelta: -0.05,
+      },
+    ],
+  },
+  {
+    id: "recoveryRegimen",
+    prompt: "Preseason: commit to an overhauled recovery regimen?",
+    options: [
+      {
+        id: "commit",
+        label: "Commit to a strict recovery regimen",
+        description: "+1 Power, +1 Movement, and meaningfully lower injury risk.",
+        attributeDelta: { power: 1, movement: 1 },
+        injuryChanceDelta: -0.04,
+      },
+      {
+        id: "asIs",
+        label: "Keep doing what's always worked",
+        description: "No change, no risk either way.",
+        attributeDelta: {},
+      },
+    ],
+  },
+  {
+    id: "altitudeCamp",
+    prompt: "An altitude training camp opens up this offseason. Go?",
+    options: [
+      {
+        id: "go",
+        label: "Train at altitude for a fitness edge",
+        description: "+3 Power, +3 Movement - but a demanding block, injury risk up.",
+        attributeDelta: { power: 3, movement: 3 },
+        injuryChanceDelta: 0.06,
+      },
+      {
+        id: "skip",
+        label: "Train at sea level, stay steady",
+        description: "+1 Power - modest, low-risk.",
+        attributeDelta: { power: 1 },
+      },
+    ],
+  },
+  {
+    id: "netGameClinic",
+    prompt: "Preseason: specialize further, or round out the game?",
+    options: [
+      {
+        id: "specialize",
+        label: "Spend the block on return and volley drills",
+        description: "+3 Return, +3 Volley - but -1 Serve from the reduced reps.",
+        attributeDelta: { return: 3, volley: 3, serve: -1 },
+      },
+      {
+        id: "balanced",
+        label: "Keep every part of the game sharp",
+        description: "+1 to every attribute - smaller, but nothing left behind.",
+        attributeDelta: {
+          forehand: 1,
+          backhand: 1,
+          serve: 1,
+          return: 1,
+          volley: 1,
+          movement: 1,
+          power: 1,
+          mentalToughness: 1,
+        },
+      },
+    ],
+  },
+];
+
+/**
+ * Randomly offers one decision from the pool, avoiding an immediate
+ * repeat of the previous season's decision (by id) so back-to-back
+ * seasons don't feel identical when the pool happens to land on the same
+ * one twice in a row.
+ */
+export function pickCareerDecision(excludePreviousId = null) {
+  const pool = excludePreviousId
+    ? CAREER_DECISIONS.filter((decision) => decision.id !== excludePreviousId)
+    : CAREER_DECISIONS;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/**
+ * Bundles a chosen option with its parent decision's prompt text, in the
+ * shape simulateNextSeason expects as its third argument - keeps that
+ * shape defined in one place rather than every caller re-assembling it.
+ */
+export function resolveDecisionChoice(decision, option) {
+  return { ...option, decisionPrompt: decision.prompt };
+}
+
+/** Applies a decision's attribute nudges on top of a season's effective attributes. */
+function applyAttributeDelta(attributes, delta) {
+  if (!delta) return attributes;
+  const result = { ...attributes };
+  for (const key of ATTRIBUTE_KEYS) {
+    if (delta[key]) {
+      result[key] = clamp(Math.round(result[key] + delta[key]), 1, 99);
+    }
+  }
+  return result;
 }
 
 // ---------- Career state (mirrors draft.js's pure-state-machine pattern) ----------
@@ -342,8 +564,14 @@ export function createCareerState(baseAttributes) {
  * the Masters/tour bracket sweep, combines everything into one accurate
  * season win/loss record and points total, derives a ranking, then rolls
  * whether next season happens at all.
+ *
+ * `decisionOption` is optional - one of a CAREER_DECISIONS option objects
+ * (see above), typically whichever one the player picked via
+ * pickCareerDecision. When present, its attributeDelta/injuryChanceDelta/
+ * retirementChanceDelta nudge this season (and the retirement roll after
+ * it); when omitted the season plays out exactly as before.
  */
-export function simulateNextSeason(state, playerPool) {
+export function simulateNextSeason(state, playerPool, decisionOption = null) {
   if (state.retired) {
     throw new Error(
       "Cannot simulate a season: this career has already ended in retirement"
@@ -352,8 +580,11 @@ export function simulateNextSeason(state, playerPool) {
 
   const age = state.age;
   const factor = ageFactor(age);
-  const baseEffective = scaleAttributes(state.baseAttributes, factor);
-  const injury = maybeInjury(baseEffective);
+  let baseEffective = scaleAttributes(state.baseAttributes, factor);
+  if (decisionOption?.attributeDelta) {
+    baseEffective = applyAttributeDelta(baseEffective, decisionOption.attributeDelta);
+  }
+  const injury = maybeInjury(baseEffective, decisionOption?.injuryChanceDelta ?? 0);
   const seasonAttributes = injury
     ? scaleAttributes(baseEffective, injury.impactMultiplier)
     : baseEffective;
@@ -378,6 +609,8 @@ export function simulateNextSeason(state, playerPool) {
     year: state.seasons.length + 1,
     age,
     ageFactor: factor,
+    decisionPrompt: decisionOption ? decisionOption.decisionPrompt : null,
+    decisionChoice: decisionOption ? decisionOption.label : null,
     injury,
     slams,
     slamTitles,
@@ -393,7 +626,7 @@ export function simulateNextSeason(state, playerPool) {
   return {
     ...state,
     age: nextAge,
-    retired: shouldRetire(nextAge),
+    retired: shouldRetire(nextAge, decisionOption?.retirementChanceDelta ?? 0),
     seasons: [...state.seasons, season],
   };
 }
@@ -406,6 +639,9 @@ export function summarizeCareer(state) {
   let wins = 0;
   let losses = 0;
   let peakRanking = null;
+  // Per-tournament Slam win counts (e.g. how many Wimbledons), for a
+  // trophy-case style display - not just the combined Slam total.
+  const slamTitlesByKey = Object.fromEntries(SLAM_CALENDAR.map((slam) => [slam.key, 0]));
 
   for (const season of state.seasons) {
     slamTitles += season.slamTitles;
@@ -416,6 +652,9 @@ export function summarizeCareer(state) {
     if (peakRanking === null || season.ranking < peakRanking) {
       peakRanking = season.ranking;
     }
+    for (const slam of season.slams) {
+      if (slam.result === "W") slamTitlesByKey[slam.key]++;
+    }
   }
 
   const lastSeason = state.seasons[state.seasons.length - 1] ?? null;
@@ -424,6 +663,7 @@ export function summarizeCareer(state) {
     seasonsPlayed: state.seasons.length,
     titles: slamTitles + masterTitles + tourTitles,
     slamTitles,
+    slamTitlesByKey,
     masterTitles,
     tourTitles,
     careerRecord: { wins, losses },
