@@ -12,7 +12,12 @@ services:
     name: tennisbuild
     runtime: node
     plan: free
-    buildCommand: npm install && npm run build
+    # --include=dev is required here even though NODE_ENV is "production":
+    # npm treats that env var as a signal to skip devDependencies during
+    # install, but vite (needed to actually build the client) lives in
+    # client/package.json's devDependencies. Without this flag the build
+    # step fails with "sh: 1: vite: not found".
+    buildCommand: npm install --include=dev && npm run build
     startCommand: npm run start -w server
     envVars:
       - key: NODE_ENV
