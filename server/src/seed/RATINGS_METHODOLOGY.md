@@ -14,17 +14,30 @@ tradeoffs when drafted, not a sports-analytics dataset.
 - **~85-90**: a genuine strength / weapon for that player
 - **~90-97**: a career-defining elite skill, among the best of their era
 - **~98-99**: an all-time-best-ever-at-that-skill case
-- **100-105**: reserved for a small handful of legends whose signature skill
-  is so exceptional that even a "perfect 99" undersells it - Federer's
-  forehand, Nadal's mental toughness, Djokovic's return, Sampras's serve,
-  McEnroe's volley, Agassi's return. Deliberately rare (6 attributes across
-  the whole roster as of this writing) so it stays special rather than
-  becoming a second ceiling everyone eventually hits - most players,
-  including most legends, still cap at 99.
-- **Below 60**: a real, known weakness relative to tour average — reserved
-  for players whose game genuinely has that gap (this is what keeps the
-  roster from clustering near the top of the scale; see Phase 0's balancing
-  notes on why variance matters)
+- **100-110**: a legend's (or, rarely, a truly elite active player's)
+  single signature skill, pushed past the normal ceiling because even a
+  "perfect 99" undersells it - Nadal's mental toughness, Djokovic's
+  return, and Sampras's serve sit at the very top of this range (108-109)
+  as close to consensus "greatest ever at that specific skill" as tennis
+  debates get; Federer's forehand, McEnroe's volley, Agassi's return, and
+  a dozen-plus more legend signatures (Becker's serve, Edberg's volley,
+  Wawrinka's backhand, del Potro's power, and others) fill out the rest
+  of the range, scaled by how singularly iconic that specific skill
+  actually was. A couple of today's most complete active stars (Alcaraz's
+  movement, Sinner's backhand) cross into this range too - deliberately
+  rare among _current_ players so it still reads as "this player is
+  genuinely on a legend's level at this one thing," not a second ceiling
+  everyone eventually hits. Most players, including most legends, still
+  cap at 99.
+- **Below 60**: a real, known weakness relative to tour average - reserved
+  for players whose game genuinely has that gap. Where the gap is a
+  famous, defining part of how that player is remembered (Isner/Karlovic's
+  movement, Sampras's return, Ivanisevic's return, Paire's/Kyrgios's
+  mental toughness), it's pushed further, into the 35-50 range - the
+  point is that landing on a lopsided player should be a real, felt
+  tradeoff, not just a slightly-lower number (this is what keeps the
+  roster from clustering near the top of the scale; see Phase 0's
+  balancing notes on why variance matters)
 
 ## Per-attribute signal
 

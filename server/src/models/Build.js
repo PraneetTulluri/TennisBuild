@@ -11,7 +11,7 @@ import { ATTRIBUTE_KEYS } from "@tennisbuild/game-engine";
 // stale cached "derived" blob drift out of sync with the scoring engine.
 const lockedEntrySchema = new mongoose.Schema(
   {
-    value: { type: Number, required: true, min: 1, max: 105 },
+    value: { type: Number, required: true, min: 1, max: 110 },
     fromPlayerName: { type: String, required: true },
     fromPlayerSlug: { type: String, required: true },
   },
