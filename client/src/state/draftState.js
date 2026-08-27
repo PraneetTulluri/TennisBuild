@@ -8,6 +8,7 @@ import {
   pickRandom,
   pickDistinct,
 } from "@tennisbuild/game-engine";
+import { playClick } from "../utils/sound.js";
 
 /**
  * Draws a spin's target player plus its two flanking "snag" neighbors, all
@@ -42,6 +43,7 @@ export function useDraftState(players) {
 
   const spin = useCallback(() => {
     if (spinning || state.phase !== "idle" || players.length === 0) return;
+    playClick();
     const { target, neighbors } = drawSpin(players);
     setTargetPlayer(target);
     setTargetNeighbors(neighbors);
@@ -56,6 +58,7 @@ export function useDraftState(players) {
   }, [targetPlayer, targetNeighbors]);
 
   const pick = useCallback((attributeKey) => {
+    playClick();
     setState((prev) => pickAttribute(prev, attributeKey));
     setTargetPlayer(null);
     setTargetNeighbors(null);
@@ -65,6 +68,7 @@ export function useDraftState(players) {
   // immediately draw + start a fresh spin for the same round.
   const respin = useCallback(() => {
     if (spinning || state.phase !== "revealed" || state.respinsRemaining <= 0) return;
+    playClick();
     setState((prev) => spendRespin(prev));
     const { target, neighbors } = drawSpin(players);
     setTargetPlayer(target);
@@ -75,6 +79,7 @@ export function useDraftState(players) {
   // Snag: swap the revealed player to a flanking neighbor - no spin
   // animation needed, it's an instant substitution.
   const snag = useCallback((side) => {
+    playClick();
     setState((prev) => spendSnag(prev, side));
   }, []);
 

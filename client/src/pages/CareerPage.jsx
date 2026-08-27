@@ -8,8 +8,20 @@ import {
   pickCareerDecision,
   resolveDecisionChoice,
   SLAM_CALENDAR,
+  ATTRIBUTE_KEYS,
+  ATTRIBUTE_LABELS,
 } from "@tennisbuild/game-engine";
 import { saveCareerToBuild } from "../api/builds.js";
+import { playClick } from "../utils/sound.js";
+
+// Not every offseason needs to be a fork in the road - a decision is only
+// offered some of the time, so the ones that do show up feel like real
+// moments rather than a mandatory click every single season.
+const DECISION_CHANCE = 0.6;
+
+function rollPendingDecision(excludePreviousId = null) {
+  return Math.random() < DECISION_CHANCE ? pickCareerDecision(excludePreviousId) : null;
+}
 
 const SLAM_SHORT_LABEL = {
   australianOpen: "Australian Open",
@@ -137,6 +149,55 @@ function SimulatingIndicator({ age }) {
   );
 }
 
+// The season this one didn't roll a decision (see DECISION_CHANCE) - a
+// quieter beat between the ones that do, still requiring a click to move
+// on rather than auto-advancing.
+function NoDecisionPrompt({ age, onContinue }) {
+  return (
+    <div className="decision-card no-decision-card">
+      <p className="result-kicker">Offseason</p>
+      <h2 className="decision-prompt">A quiet offseason - nothing notable to report.</h2>
+      <button type="button" className="spin-button" onClick={onContinue}>
+        Play Season (Age {age})
+      </button>
+    </div>
+  );
+}
+
+// A live view of the build's actual attributes as the career has aged
+// them - the age curve, injuries, and career decisions all show up here,
+// not just in the season-by-season results above. `previous` is the
+// season before this one (or, for the very first season played, the
+// original draft attributes), which is what produces the up/down deltas.
+function AttributePanel({ current, previous }) {
+  return (
+    <div className="career-attributes">
+      <p className="result-kicker">Attributes This Season</p>
+      <div className="career-attributes-grid">
+        {ATTRIBUTE_KEYS.map((key) => {
+          const value = current[key];
+          const delta = previous ? value - previous[key] : 0;
+          return (
+            <div key={key} className="career-attribute-row">
+              <span className="career-attribute-label">{ATTRIBUTE_LABELS[key]}</span>
+              <span
+                className={`career-attribute-value${value > 99 ? " elite-value" : ""}`}
+              >
+                {value}
+              </span>
+              <span
+                className={`career-attribute-delta${delta > 0 ? " up" : delta < 0 ? " down" : ""}`}
+              >
+                {delta > 0 ? `+${delta}` : delta < 0 ? delta : "–"}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /**
  * Simulates the finished build's career, one season at a time, via the
  * game-engine's createCareerState/simulateNextSeason pure state machine
@@ -158,7 +219,7 @@ export default function CareerPage() {
     attributes ? createCareerState(attributes) : null
   );
   const [stage, setStage] = useState("decision"); // decision | simulating | result | retired
-  const [pendingDecision, setPendingDecision] = useState(() => pickCareerDecision());
+  const [pendingDecision, setPendingDecision] = useState(() => rollPendingDecision());
   const [lastDecisionId, setLastDecisionId] = useState(null);
   const [careerSaveStatus, setCareerSaveStatus] = useState("idle"); // idle | saving | saved | error
 
@@ -203,23 +264,38 @@ export default function CareerPage() {
     );
   }
 
-  function handleChooseOption(option) {
-    const resolved = resolveDecisionChoice(pendingDecision, option);
+  // `option` is omitted when this season didn't roll a decision at all
+  // (see NoDecisionPrompt) - simulateNextSeason's third argument is
+  // already designed to be optional for exactly that case.
+  function handlePlaySeason(option) {
+    const resolved =
+      pendingDecision && option ? resolveDecisionChoice(pendingDecision, option) : null;
+    playClick();
     setStage("simulating");
     window.setTimeout(() => {
       const next = simulateNextSeason(careerState, playerPool, resolved);
       setCareerState(next);
-      setLastDecisionId(pendingDecision.id);
+      if (resolved) setLastDecisionId(pendingDecision.id);
       setStage(next.retired ? "retired" : "result");
     }, 900);
   }
 
   function handleContinue() {
-    setPendingDecision(pickCareerDecision(lastDecisionId));
+    playClick();
+    setPendingDecision(rollPendingDecision(lastDecisionId));
     setStage("decision");
   }
 
   const latestSeason = careerState.seasons[careerState.seasons.length - 1] ?? null;
+  const priorSeason = careerState.seasons[careerState.seasons.length - 2] ?? null;
+  const currentAttributes = latestSeason
+    ? latestSeason.attributes
+    : careerState.baseAttributes;
+  const previousAttributes = latestSeason
+    ? priorSeason
+      ? priorSeason.attributes
+      : careerState.baseAttributes
+    : null;
 
   return (
     <div className="career-page">
@@ -231,8 +307,11 @@ export default function CareerPage() {
       <TrophyCase slamTitlesByKey={summary.slamTitlesByKey} />
 
       <div className="career-stage" key={`${stage}-${careerState.seasons.length}`}>
-        {stage === "decision" && (
-          <DecisionPrompt decision={pendingDecision} onChoose={handleChooseOption} />
+        {stage === "decision" && pendingDecision && (
+          <DecisionPrompt decision={pendingDecision} onChoose={handlePlaySeason} />
+        )}
+        {stage === "decision" && !pendingDecision && (
+          <NoDecisionPrompt age={careerState.age} onContinue={() => handlePlaySeason()} />
         )}
         {stage === "simulating" && <SimulatingIndicator age={careerState.age} />}
         {(stage === "result" || stage === "retired") && latestSeason && (
@@ -246,6 +325,8 @@ export default function CareerPage() {
           </>
         )}
       </div>
+
+      <AttributePanel current={currentAttributes} previous={previousAttributes} />
 
       {stage === "retired" && goat && (
         <div className="career-summary">

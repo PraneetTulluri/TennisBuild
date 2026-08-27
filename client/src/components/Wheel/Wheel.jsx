@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import PlayerCard from "./PlayerCard.jsx";
+import { playTick } from "../../utils/sound.js";
 
 // Must match the card width + gap set in index.css (.wheel-card) - the
 // landing-position math below depends on it being accurate.
@@ -87,6 +88,35 @@ export default function Wheel({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spinning, targetPlayer, targetNeighbors]);
+
+  // A decelerating tick, like a real wheel-of-fortune slowing down as it
+  // approaches landing - not synced to individual card positions (the CSS
+  // transition is a single eased move, not a discrete card-by-card
+  // scroll), just a rhythm that starts fast and stretches out to roughly
+  // match the spin's own ease-out feel.
+  useEffect(() => {
+    if (!animate) return undefined;
+    let cancelled = false;
+    let timeoutId;
+    let delay = 70;
+    const startedAt = Date.now();
+    const spinDurationMs = 2200;
+
+    function tick() {
+      if (cancelled) return;
+      playTick();
+      delay = Math.min(280, delay * 1.15);
+      if (Date.now() - startedAt + delay < spinDurationMs) {
+        timeoutId = setTimeout(tick, delay);
+      }
+    }
+    timeoutId = setTimeout(tick, delay);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [animate]);
 
   return (
     <div className="wheel" ref={containerRef}>

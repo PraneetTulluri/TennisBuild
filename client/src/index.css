@@ -1182,6 +1182,68 @@ button {
   font-style: italic;
 }
 
+.no-decision-card {
+  opacity: 0.9;
+}
+
+.no-decision-card .decision-prompt {
+  color: var(--muted);
+  font-size: 1.2rem;
+}
+
+/* ---------- Career attributes ---------- */
+.career-attributes {
+  width: 100%;
+  background: var(--ink-panel);
+  border: 1px solid var(--ink-panel-light);
+  border-radius: 16px;
+  padding: 18px;
+  text-align: center;
+}
+
+.career-attributes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.career-attribute-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--ink);
+  border-radius: 8px;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.career-attribute-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.career-attribute-value {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+}
+
+.career-attribute-delta {
+  font-size: 0.75rem;
+  color: var(--muted);
+  min-width: 24px;
+  text-align: right;
+}
+
+.career-attribute-delta.up {
+  color: var(--ball);
+}
+
+.career-attribute-delta.down {
+  color: #ff8a8a;
+}
+
 @keyframes panel-in {
   from {
     opacity: 0;

@@ -85,9 +85,23 @@ describe("shouldRetire", () => {
     }
   });
 
-  it("always retires at the hard cap", () => {
-    expect(shouldRetire(38)).toBe(true);
-    expect(shouldRetire(40)).toBe(true);
+  it("always retires at the absolute hard cap, regardless of retirementChanceDelta", () => {
+    expect(shouldRetire(42)).toBe(true);
+    expect(shouldRetire(45, -1)).toBe(true);
+  });
+
+  it("a strongly negative retirementChanceDelta can push the chance to zero before the hard cap", () => {
+    for (let i = 0; i < 30; i++) {
+      expect(shouldRetire(35, -1)).toBe(false);
+    }
+  });
+
+  it("a strongly positive retirementChanceDelta makes retirement near-certain before the hard cap", () => {
+    let retiredCount = 0;
+    for (let i = 0; i < 30; i++) {
+      if (shouldRetire(31, 1)) retiredCount++;
+    }
+    expect(retiredCount).toBeGreaterThan(25);
   });
 });
 
@@ -155,6 +169,22 @@ describe("simulateNextSeason", () => {
         expect(slam.wins).toBeLessThan(7);
       }
     }
+  });
+
+  it("records that season's actual effective attributes (age-scaled, decision-nudged, injury-adjusted), for a UI to show how the stats changed over time", () => {
+    const state = createCareerState(STRONG_ATTRIBUTES);
+    const next = simulateNextSeason(state, FAKE_POOL);
+    const season = next.seasons[0];
+    expect(season.attributes).toBeDefined();
+    for (const key of Object.keys(STRONG_ATTRIBUTES)) {
+      expect(season.attributes[key]).toBeGreaterThanOrEqual(1);
+      expect(season.attributes[key]).toBeLessThanOrEqual(99);
+    }
+    // Age 18 is still on the rise toward peak, so effective attributes
+    // should be scaled down from the build's base values (absent a
+    // decision buff big enough to counter that, which STRONG_ATTRIBUTES
+    // + no decision here doesn't have).
+    expect(season.attributes.serve).toBeLessThan(STRONG_ATTRIBUTES.serve);
   });
 
   it("throws if called on an already-retired career", () => {
