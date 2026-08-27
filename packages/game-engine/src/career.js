@@ -1,6 +1,5 @@
 import { ATTRIBUTE_KEYS } from "./attributes.js";
 import { computeSurfaceStrength } from "./scoring.js";
-import { pickDistinct } from "./wheel.js";
 
 // Career simulation: takes a finished build's attributes and simulates a
 // full career, one season at a time, from age 18 until retirement.
@@ -112,6 +111,40 @@ function activePlayers(pool) {
   return active.length >= 3 ? active : pool; // fallback for a small/test pool
 }
 
+/** A player's overall strength for seeding purposes - plain average across all 8 attributes. */
+function strengthOf(player) {
+  return (
+    ATTRIBUTE_KEYS.reduce((sum, key) => sum + player.attributes[key], 0) /
+    ATTRIBUTE_KEYS.length
+  );
+}
+
+// How much of the active pool a real opponent can be drawn from, by round -
+// shrinking to a narrower band of the pool's *strongest* players as the
+// rounds get later. This is the fix for a build coasting to Slam titles it
+// has no business winning: the active pool is ~45 players deep so wheel
+// spins stay varied, but most of that depth is current-tour filler, not
+// major contenders. Without this, a QF/SF/F opponent was drawn uniformly
+// from the whole pool, so a mediocre build could easily draw (and beat) a
+// filler pro in a Slam final instead of someone actually elite. A real
+// Wimbledon final opponent is never a bottom-of-the-pool journeyman.
+const REAL_OPPONENT_POOL_FRACTION = { QF: 0.4, SF: 0.18, F: 0.08 };
+const REAL_OPPONENT_POOL_MIN = 3;
+
+/** Draws one real, not-yet-used-this-slam opponent from the strength band appropriate to `round`. */
+function pickRealOpponent(sortedActivePool, round, usedSlugs) {
+  const bandSize = Math.max(
+    REAL_OPPONENT_POOL_MIN,
+    Math.round(sortedActivePool.length * REAL_OPPONENT_POOL_FRACTION[round])
+  );
+  const available = sortedActivePool.filter((p) => !usedSlugs.has(p.slug));
+  const band = available.slice(0, bandSize);
+  const candidates = band.length > 0 ? band : available;
+  const choice = candidates[Math.floor(Math.random() * candidates.length)];
+  usedSlugs.add(choice.slug);
+  return choice;
+}
+
 // ---------- Grand Slams ----------
 
 export const SLAM_CALENDAR = [
@@ -141,13 +174,15 @@ export const SLAM_RESULT_POINTS = {
 };
 
 function simulateSlam(attributes, slam, playerPool) {
-  const realOpponents = pickDistinct(activePlayers(playerPool), 3);
-  let realOpponentIndex = 0;
+  const sortedActive = [...activePlayers(playerPool)].sort(
+    (a, b) => strengthOf(b) - strengthOf(a)
+  );
+  const usedSlugs = new Set();
   let wins = 0;
 
   for (const round of SLAM_ROUNDS) {
     const opponentAttributes = REAL_OPPONENT_ROUNDS.has(round)
-      ? realOpponents[realOpponentIndex++].attributes
+      ? pickRealOpponent(sortedActive, round, usedSlugs).attributes
       : generateOpponentAttributes(SLAM_JOURNEYMAN_BASELINE[round]);
 
     if (!rollMatch(attributes, opponentAttributes, slam.surface)) {

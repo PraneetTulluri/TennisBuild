@@ -39,9 +39,27 @@ function fakePlayer(overrides = {}) {
   };
 }
 
-// pickDistinct needs at least 3 active players to draw Slam QF/SF/F
-// opponents from.
+// At least 3 active players are needed to draw Slam QF/SF/F opponents from.
 const FAKE_POOL = [fakePlayer(), fakePlayer(), fakePlayer(), fakePlayer(), fakePlayer()];
+
+const ELITE_ATTRIBUTES = {
+  forehand: 92,
+  backhand: 90,
+  serve: 93,
+  return: 88,
+  volley: 85,
+  movement: 91,
+  power: 89,
+  mentalToughness: 93,
+};
+
+// A pool shaped like the real roster: mostly true Slam-contender-tier
+// players plus a handful of much weaker tour filler kept around for wheel
+// variety, not major wins.
+const MIXED_STRENGTH_POOL = [
+  ...Array.from({ length: 15 }, () => fakePlayer({ attributes: ELITE_ATTRIBUTES })),
+  ...Array.from({ length: 10 }, () => fakePlayer()),
+];
 
 describe("ageFactor", () => {
   it("rises through the early 20s, plateaus at peak, then declines", () => {
@@ -185,5 +203,39 @@ describe("summarizeCareer", () => {
     const summary = summarizeCareer(createCareerState(STRONG_ATTRIBUTES));
     expect(summary.peakRanking).toBeNull();
     expect(summary.retirementAge).toBeNull();
+  });
+});
+
+describe("Slam opponent seeding", () => {
+  it("keeps Slam titles rare for a modest build, even across many seasons against a pool that's mostly elite active players", () => {
+    // Regression guard for a real bug: Slam QF/SF/F opponents used to be
+    // drawn uniformly from the whole active pool, so a merely-good build
+    // could easily draw (and beat) tour filler in a Slam final instead of
+    // someone actually elite - letting a 75-ish OVR build rack up several
+    // Slam titles a career, which makes no sense. Opponents are now drawn
+    // from a narrowing band of the pool's *strongest* players as rounds
+    // get later, so a modest build should almost never string together a
+    // QF/SF/F run, no matter how many seasons it gets to try.
+    const MODEST_ATTRIBUTES = {
+      forehand: 75,
+      backhand: 74,
+      serve: 76,
+      return: 73,
+      volley: 72,
+      movement: 75,
+      power: 74,
+      mentalToughness: 76,
+    };
+
+    let state = createCareerState(MODEST_ATTRIBUTES);
+    let slamTitles = 0;
+    const SEASONS_TO_SIMULATE = 40;
+    for (let i = 0; i < SEASONS_TO_SIMULATE; i++) {
+      state = { ...state, retired: false }; // force-continue past natural retirement rolls
+      state = simulateNextSeason(state, MIXED_STRENGTH_POOL);
+      slamTitles += state.seasons[state.seasons.length - 1].slamTitles;
+    }
+
+    expect(slamTitles).toBeLessThan(6);
   });
 });
