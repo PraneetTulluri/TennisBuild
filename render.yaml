@@ -1,0 +1,23 @@
+# Render "Blueprint" - lets Render auto-configure the web service from this
+# file instead of filling in a dozen dashboard fields by hand (New + ->
+# Blueprint -> pick this repo). One free service serves both the API and
+# the built client (see server/src/index.js), so there's no separate
+# static site to configure and no cross-origin cookie setup needed.
+#
+# MONGODB_URI and JWT_SECRET are marked `sync: false` on purpose - real
+# secrets don't belong committed to a file in the repo. Render will prompt
+# for their values in the dashboard the first time this blueprint runs.
+services:
+  - type: web
+    name: tennisbuild
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run start -w server
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
