@@ -333,3 +333,53 @@ describe("career decisions", () => {
     expect(next.seasons[0].decisionPrompt).toBeNull();
   });
 });
+
+describe("Masters/tour title realism", () => {
+  it("keeps total career titles proportional to Slam success, instead of ballooning independently of it", () => {
+    // Regression guard for a real bug: a build that only won a handful of
+    // Slams (a very good, not all-time-great career - think Wawrinka's 3
+    // Slams and 16 career titles) was coming out of a full career with
+    // 100+ total titles, wildly outside anything a real player with that
+    // few Slams has ever done - Masters/tour opponents were calibrated
+    // far too soft relative to how tough real Slam opponents (seeded from
+    // the pool's strongest players - see the "Slam opponent seeding"
+    // block above) had already become. A build tuned to land a modest
+    // handful of Slams across many careers should land its average total
+    // title count well under legend territory (the real all-time record,
+    // Connors' 109, is the rough ceiling - nobody with a handful of
+    // Slams should be approaching it).
+    const UPPER_MID_ATTRIBUTES = {
+      forehand: 84,
+      backhand: 83,
+      serve: 85,
+      return: 82,
+      volley: 81,
+      movement: 84,
+      power: 83,
+      mentalToughness: 85,
+    };
+
+    const CAREERS_TO_SIMULATE = 40;
+    let totalSlams = 0;
+    let totalTitles = 0;
+    for (let i = 0; i < CAREERS_TO_SIMULATE; i++) {
+      let state = createCareerState(UPPER_MID_ATTRIBUTES);
+      while (!state.retired) {
+        state = simulateNextSeason(state, MIXED_STRENGTH_POOL);
+      }
+      const summary = summarizeCareer(state);
+      totalSlams += summary.slamTitles;
+      totalTitles += summary.titles;
+    }
+
+    const avgSlams = totalSlams / CAREERS_TO_SIMULATE;
+    const avgTitles = totalTitles / CAREERS_TO_SIMULATE;
+
+    // This build should land in "very good, not all-time-great" territory.
+    expect(avgSlams).toBeLessThan(8);
+    // The old baselines averaged 60-100+ titles for a build in this
+    // range; realistic real-world comparables (Wawrinka, Hewitt, Roddick)
+    // all sit well under 40 total titles with a handful of Slams.
+    expect(avgTitles).toBeLessThan(40);
+  });
+});

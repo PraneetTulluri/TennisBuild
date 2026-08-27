@@ -241,11 +241,11 @@ function simulateSlam(attributes, slam, playerPool) {
 // is meant to represent the bulk of a season, not individual stories.
 
 const MASTERS_ROUNDS = ["R64", "R32", "R16", "QF", "SF", "F"];
-const MASTERS_BASELINE = { R64: 62, R32: 68, R16: 74, QF: 80, SF: 85, F: 88 };
+const MASTERS_BASELINE = { R64: 70, R32: 76, R16: 82, QF: 87, SF: 91, F: 94 };
 const MASTERS_EVENTS_PER_SEASON = 9; // matches the real ATP Masters 1000 calendar
 
 const TOUR_ROUNDS = ["R32", "R16", "QF", "SF", "F"];
-const TOUR_BASELINE = { R32: 55, R16: 62, QF: 68, SF: 74, F: 78 };
+const TOUR_BASELINE = { R32: 62, R16: 70, QF: 76, SF: 82, F: 86 };
 const TOUR_EVENTS_PER_SEASON = 12; // a rough count of 250/500-level events a healthy full season includes
 
 // Rough, simplified surface mix for non-Slam events (real ATP tour skews
