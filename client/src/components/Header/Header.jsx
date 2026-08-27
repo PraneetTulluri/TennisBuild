@@ -23,6 +23,7 @@ export default function Header() {
       <nav className="site-header-nav">
         <Link to="/draft">Build</Link>
         <Link to="/builds">My Builds</Link>
+        <Link to="/leaderboard">Leaderboard</Link>
         {!loading && user && (
           <>
             <span className="site-header-user">Hi, {user.name}</span>

@@ -93,6 +93,11 @@ function Dashboard({ user, builds }) {
             View All Builds
           </button>
         </Link>
+        <Link to="/leaderboard">
+          <button type="button" className="secondary-button">
+            Leaderboard
+          </button>
+        </Link>
       </div>
 
       {recent.length > 0 && (

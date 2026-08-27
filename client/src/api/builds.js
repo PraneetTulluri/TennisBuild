@@ -27,6 +27,14 @@ export async function fetchMyBuilds() {
   return response.json();
 }
 
+export async function fetchLeaderboard() {
+  const response = await fetch("/api/builds/leaderboard", { credentials: "include" });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch leaderboard: ${response.status}`);
+  }
+  return response.json();
+}
+
 export async function fetchBuild(id) {
   const response = await fetch(`/api/builds/${id}`, { credentials: "include" });
   if (!response.ok) {

@@ -50,6 +50,28 @@ router.get("/", async (req, res) => {
   }
 });
 
+// GET /api/builds/leaderboard - every saved build (guest and account alike),
+// for browsing/sorting across *all* players, not just your own. Registered
+// ahead of GET /:id so "leaderboard" isn't swallowed as a build id.
+// `userId` is populated down to just its `name` (never email/passwordHash)
+// so a card can credit "by <name>" without leaking anything private; a
+// guest-saved build simply has a null userId, shown as "Guest" client-side.
+// Capped at a generous limit as a sanity guardrail, not an expected ceiling
+// for this project's scale.
+router.get("/leaderboard", async (req, res) => {
+  try {
+    const builds = await Build.find({})
+      .sort({ createdAt: -1 })
+      .limit(500)
+      .populate("userId", "name")
+      .lean();
+    res.json(builds);
+  } catch (err) {
+    console.error("[routes/builds] Failed to load leaderboard:", err);
+    res.status(500).json({ error: "Failed to load leaderboard" });
+  }
+});
+
 // GET /api/builds/:id - fetch one build (revisiting a saved result/career).
 router.get("/:id", async (req, res) => {
   try {
