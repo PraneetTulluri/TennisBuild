@@ -7,6 +7,9 @@ import {
   summarizeCareer,
   SLAM_CALENDAR,
   DEFAULT_SLIDERS,
+  LIFE_EVENTS,
+  pickLifeEvent,
+  resolveLifeEventChoice,
 } from "./career.js";
 
 const STRONG_ATTRIBUTES = {
@@ -80,12 +83,19 @@ describe("pointsToRanking", () => {
 });
 
 describe("createCareerState", () => {
-  it("starts at age 18 with currentAttributes exactly equal to the drafted attributes, no seasons, zero legacy", () => {
+  it("starts at age 18 with currentAttributes below the drafted potential (a still-developing 18-year-old), no seasons, zero legacy", () => {
     const state = createCareerState(STRONG_ATTRIBUTES);
     expect(state.age).toBe(18);
     expect(state.retired).toBe(false);
     expect(state.seasons).toEqual([]);
-    expect(state.currentAttributes).toEqual(STRONG_ATTRIBUTES);
+    expect(state.baseAttributes).toEqual(STRONG_ATTRIBUTES);
+    for (const key of Object.keys(STRONG_ATTRIBUTES)) {
+      expect(state.currentAttributes[key]).toBeLessThan(STRONG_ATTRIBUTES[key]);
+      // Roughly 75% of potential - not some arbitrary other discount.
+      const expected = Math.round(STRONG_ATTRIBUTES[key] * 0.75);
+      expect(state.currentAttributes[key]).toBeGreaterThanOrEqual(expected - 1);
+      expect(state.currentAttributes[key]).toBeLessThanOrEqual(expected + 1);
+    }
     expect(state.legacyScore).toBe(0);
     expect(state.retirementReason).toBeNull();
   });
@@ -128,12 +138,12 @@ describe("simulateNextSeason", () => {
     }
   });
 
-  it("season.attributes reflects this season's starting attributes (or an injury-reduced version of them), not a fixed age-curve discount", () => {
+  it("season.attributes reflects this season's actual currentAttributes (or an injury-reduced version of them), not the drafted potential directly", () => {
     const state = createCareerState(STRONG_ATTRIBUTES);
     const next = simulateNextSeason(state, FAKE_POOL, MAX_SLIDERS);
     const season = next.seasons[0];
     for (const key of Object.keys(STRONG_ATTRIBUTES)) {
-      const full = STRONG_ATTRIBUTES[key];
+      const full = state.currentAttributes[key];
       const injured = Math.round(full * 0.85);
       expect([full, injured]).toContain(season.attributes[key]);
     }
@@ -195,8 +205,9 @@ describe("simulateNextSeason", () => {
       return total / trials;
     }
 
+    const startingState = createCareerState(STRONG_ATTRIBUTES);
     const startingAverage =
-      Object.values(STRONG_ATTRIBUTES).reduce((sum, v) => sum + v, 0) / 8;
+      Object.values(startingState.currentAttributes).reduce((sum, v) => sum + v, 0) / 8;
     const afterThreeSeasons = averageAfterSeasons(3, 30);
     expect(afterThreeSeasons).toBeGreaterThan(startingAverage);
   });
@@ -428,5 +439,44 @@ describe("Legacy Score breakdown", () => {
     } else {
       expect(slamEntry).toBeUndefined();
     }
+  });
+});
+
+describe("life events", () => {
+  it("pickLifeEvent avoids repeating the excluded id when other events exist", () => {
+    for (let i = 0; i < 30; i++) {
+      const event = pickLifeEvent(LIFE_EVENTS[0].id);
+      expect(event.id).not.toBe(LIFE_EVENTS[0].id);
+    }
+  });
+
+  it("resolveLifeEventChoice bundles the chosen option with its parent event's prompt", () => {
+    const event = LIFE_EVENTS[0];
+    const option = event.options[0];
+    const resolved = resolveLifeEventChoice(event, option);
+    expect(resolved.eventPrompt).toBe(event.prompt);
+    expect(resolved.id).toBe(option.id);
+  });
+
+  it("a chosen life event's attributeDelta and legacyDelta both show up on the resulting season/state", () => {
+    const event = LIFE_EVENTS.find((e) => e.id === "hometownParade");
+    const option = event.options.find((o) => o.id === "soak-in");
+    const resolved = resolveLifeEventChoice(event, option);
+
+    const state = createCareerState(STRONG_ATTRIBUTES);
+    const next = simulateNextSeason(state, FAKE_POOL, DEFAULT_SLIDERS, resolved);
+    const season = next.seasons[0];
+
+    expect(season.lifeEventPrompt).toBe(event.prompt);
+    expect(season.lifeEventChoice).toBe(option.label);
+    const legacyLine = season.legacyBreakdown.find((e) => e.label === option.label);
+    expect(legacyLine.amount).toBe(option.legacyDelta);
+  });
+
+  it("omitting a life event leaves season.lifeEventPrompt/lifeEventChoice null", () => {
+    const state = createCareerState(STRONG_ATTRIBUTES);
+    const next = simulateNextSeason(state, FAKE_POOL, DEFAULT_SLIDERS);
+    expect(next.seasons[0].lifeEventPrompt).toBeNull();
+    expect(next.seasons[0].lifeEventChoice).toBeNull();
   });
 });

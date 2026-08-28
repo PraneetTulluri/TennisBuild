@@ -10,6 +10,9 @@ import {
   SLAM_CALENDAR,
   ATTRIBUTE_KEYS,
   ATTRIBUTE_LABELS,
+  pickLifeEvent,
+  shouldOfferLifeEvent,
+  resolveLifeEventChoice,
 } from "@tennisbuild/game-engine";
 import { saveCareerToBuild } from "../api/builds.js";
 import { playClick } from "../utils/sound.js";
@@ -143,6 +146,9 @@ function SeasonCard({ season }) {
       <p className="season-sliders-line">
         🏋️ Training {season.trainingIntensity} · 🗓️ Schedule {season.scheduleIntensity}
       </p>
+      {season.lifeEventChoice && (
+        <p className="season-life-event-line">📰 {season.lifeEventChoice}</p>
+      )}
       <div className="slam-grid">
         {season.slams.map((slam) => (
           <SlamBadge key={slam.key} slam={slam} />
@@ -165,12 +171,59 @@ function SeasonCard({ season }) {
   );
 }
 
+// A sparse, random off-court moment - most seasons have none. When one
+// does show up, a choice has to be made before the season can be
+// simulated, same as picking sliders - it is part of the season plan,
+// not a separate interruption.
+function LifeEventCard({ event, chosenOptionId, onChoose }) {
+  return (
+    <div className="life-event-card">
+      <p className="life-event-kicker">📰 Life Update</p>
+      <p className="life-event-prompt">{event.prompt}</p>
+      <div className="life-event-options">
+        {event.options.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            className={`life-event-option${chosenOptionId === option.id ? " selected" : ""}`}
+            onClick={() => onChoose(option)}
+          >
+            <strong>{option.label}</strong>
+            <span>{option.description}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// A one-time nudge the first time a career reaches 30 - retirement has
+// been available the whole time, but this is the age where the tradeoff
+// (accolades chased vs. the Legacy risk of hanging on) starts actually
+// mattering.
+function Age30Reminder({ onDismiss }) {
+  return (
+    <div className="age30-reminder">
+      <p className="age30-reminder-title">🎂 Turning 30</p>
+      <p>
+        Retirement has been your call every season, but from here it starts to matter
+        more. Ending on a bad year or a career-ending injury costs the Legacy Score;
+        retiring on your own terms protects it. Playing on gives more chances at Slams and
+        titles - just know what is at stake either way.
+      </p>
+      <button type="button" className="secondary-button" onClick={onDismiss}>
+        Got it
+      </button>
+    </div>
+  );
+}
+
 // The two levers set before every season - training intensity trades
 // attribute growth for injury risk, schedule intensity trades how many
 // events get entered (more title chances, more ranking points) for
 // fatigue. Both persist between seasons rather than resetting, so easing
 // off as the player ages is a deliberate choice, not busywork.
-function SlidersPanel({ sliders, onChange, onSimulate, age }) {
+function SlidersPanel({ sliders, onChange, onSimulate, age, canSimulate }) {
   return (
     <div className="decision-card">
       <p className="result-kicker">Season Plan - Age {age}</p>
@@ -211,7 +264,12 @@ function SlidersPanel({ sliders, onChange, onSimulate, age }) {
           fatigue.
         </p>
       </div>
-      <button type="button" className="spin-button" onClick={onSimulate}>
+      <button
+        type="button"
+        className="spin-button"
+        onClick={onSimulate}
+        disabled={!canSimulate}
+      >
         Simulate Season
       </button>
     </div>
@@ -288,9 +346,21 @@ export default function CareerPage() {
   const [careerState, setCareerState] = useState(() =>
     attributes ? createCareerState(attributes) : null
   );
+  // The player's actual attributes at age 18, before any development -
+  // captured once so the first season's AttributePanel comparison is
+  // against where the player actually started, not the full drafted
+  // potential (which createCareerState only starts a fraction of the
+  // way toward - see career.js's START_POTENTIAL_FRACTION).
+  const [startingAttributes] = useState(() => careerState?.currentAttributes ?? null);
   const [stage, setStage] = useState("sliders"); // sliders | simulating | result | retired
   const [sliders, setSliders] = useState(DEFAULT_SLIDERS);
   const [careerSaveStatus, setCareerSaveStatus] = useState("idle"); // idle | saving | saved | error
+  const [pendingLifeEvent, setPendingLifeEvent] = useState(() =>
+    shouldOfferLifeEvent() ? pickLifeEvent() : null
+  );
+  const [lastLifeEventId, setLastLifeEventId] = useState(null);
+  const [chosenLifeEventOption, setChosenLifeEventOption] = useState(null);
+  const [dismissedAge30Reminder, setDismissedAge30Reminder] = useState(false);
 
   const summary = careerState ? summarizeCareer(careerState) : null;
   const goat =
@@ -338,16 +408,28 @@ export default function CareerPage() {
 
   function handleSimulate() {
     playClick();
+    const resolvedLifeEvent =
+      pendingLifeEvent && chosenLifeEventOption
+        ? resolveLifeEventChoice(pendingLifeEvent, chosenLifeEventOption)
+        : null;
     setStage("simulating");
     window.setTimeout(() => {
-      const next = simulateNextSeason(careerState, playerPool, sliders);
+      const next = simulateNextSeason(
+        careerState,
+        playerPool,
+        sliders,
+        resolvedLifeEvent
+      );
       setCareerState(next);
+      if (pendingLifeEvent) setLastLifeEventId(pendingLifeEvent.id);
       setStage(next.retired ? "retired" : "result");
     }, 900);
   }
 
   function handleContinue() {
     playClick();
+    setPendingLifeEvent(shouldOfferLifeEvent() ? pickLifeEvent(lastLifeEventId) : null);
+    setChosenLifeEventOption(null);
     setStage("sliders");
   }
 
@@ -365,7 +447,7 @@ export default function CareerPage() {
   const previousAttributes = latestSeason
     ? priorSeason
       ? priorSeason.attributes
-      : careerState.baseAttributes
+      : startingAttributes
     : null;
 
   return (
@@ -380,14 +462,28 @@ export default function CareerPage() {
         <LegacyScoreBadge legacyScore={summary.legacyScore} />
       </div>
 
+      {careerState.age === 30 && !dismissedAge30Reminder && stage === "sliders" && (
+        <Age30Reminder onDismiss={() => setDismissedAge30Reminder(true)} />
+      )}
+
       <div className="career-stage" key={`${stage}-${careerState.seasons.length}`}>
         {stage === "sliders" && (
-          <SlidersPanel
-            sliders={sliders}
-            onChange={setSliders}
-            onSimulate={handleSimulate}
-            age={careerState.age}
-          />
+          <>
+            {pendingLifeEvent && (
+              <LifeEventCard
+                event={pendingLifeEvent}
+                chosenOptionId={chosenLifeEventOption?.id}
+                onChoose={setChosenLifeEventOption}
+              />
+            )}
+            <SlidersPanel
+              sliders={sliders}
+              onChange={setSliders}
+              onSimulate={handleSimulate}
+              age={careerState.age}
+              canSimulate={!pendingLifeEvent || !!chosenLifeEventOption}
+            />
+          </>
         )}
         {stage === "simulating" && <SimulatingIndicator age={careerState.age} />}
         {(stage === "result" || stage === "retired") && latestSeason && (

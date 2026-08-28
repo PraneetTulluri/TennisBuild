@@ -90,14 +90,17 @@ export default function GuidePage() {
 
         <GuideSection icon="🎾" title="Career Simulation">
           <p>
-            Attributes start at <strong>exactly</strong> what the draft produced - no
-            discount for being young. From there, every season two sliders get set before
-            simulating:
+            The draft is a <strong>potential ceiling</strong>, not a starting point - an
+            18-year-old this talented is not fully formed yet. Actual attributes start
+            below that ceiling and close the gap over the early career, so a great draft
+            still means real (if limited) success young rather than either immediate
+            dominance or years of being unremarkable. Every season, two sliders get set
+            before simulating:
           </p>
           <ul className="guide-list">
             <li>
-              <strong>Training Intensity</strong> - higher pushes attribute growth further
-              this season, but raises injury risk.
+              <strong>Training Intensity</strong> - higher closes the gap to potential
+              faster, but raises injury risk.
             </li>
             <li>
               <strong>Schedule Intensity</strong> - higher enters more Masters/tour
@@ -106,9 +109,12 @@ export default function GuidePage() {
             </li>
           </ul>
           <p>
-            Attributes drift up or down each season based on age, those two sliders, how
-            the season actually went, and injuries - so the same draft can turn into a
-            genuine GOAT or a burnout, depending entirely on how it is managed.
+            Decline eventually sets in, but not at a fixed age - training hard
+            consistently pulls it earlier, a more conservative career pushes it later. A
+            sparse, random pool of off-court life events (a breakup, a new baby, a viral
+            moment, a feud with a rival, and many more) can also show up a few times a
+            career, each a small choice with its own modest effect - just enough that no
+            two careers ever play out quite the same way.
           </p>
           <p>
             Retirement is a choice made every season - Continue to Next Season, or Retire

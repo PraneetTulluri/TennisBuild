@@ -27,10 +27,14 @@ export {
   SLAM_CALENDAR,
   SLAM_RESULT_POINTS,
   DEFAULT_SLIDERS,
+  LIFE_EVENTS,
   pointsToRanking,
   createCareerState,
   simulateNextSeason,
   retireNow,
   summarizeCareer,
+  pickLifeEvent,
+  shouldOfferLifeEvent,
+  resolveLifeEventChoice,
 } from "./career.js";
 export { GOAT_BENCHMARKS, computeGoatScore, computeGoatRanking } from "./goat.js";

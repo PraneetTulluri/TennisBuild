@@ -19,50 +19,68 @@ import { computeSurfaceStrength } from "./scoring.js";
 // Season-to-season shape is player-driven, not a fixed age curve: each
 // season the player sets a training-intensity and schedule-intensity
 // slider (0-100), which trade attribute growth and title opportunities
-// against injury risk - see the "Sliders" and "Attribute drift" sections
-// below. Attributes start at exactly what the draft produced (no
-// automatic discount for being young) and drift up or down afterward
-// based on age, those slider choices, how the season actually went, and
-// injuries - so two careers from the same build can end up completely
-// different depending on how it's managed. Retirement is the player's
+// against injury risk - see the "Sliders" and "Attribute development &
+// decline" sections below. The draft is a *potential ceiling*, not a
+// starting point - actual attributes start below it (a talented but
+// still-developing 18-year-old) and close that gap over the early
+// career at a training-driven pace, so a great draft still means real,
+// if limited, success young rather than either immediate dominance or
+// years of being unremarkable. Decline eventually sets in - not at a
+// fixed age, but earlier the more consistently hard training has been
+// pushed across the career, later for a more conservative one. Two
+// careers from the same build can end up completely different
+// depending entirely on how it's managed. Retirement is the player's
 // own call every season (see retireNow) rather than a dice roll, with a
 // Legacy Score - not just raw totals - deciding the final GOAT ranking:
 // retiring while still near your peak locks in a bonus, while grinding
 // through a bad decline season costs you. The only *forced* endings are
 // a hard age cap and a rare career-ending injury (more likely the harder
 // training/schedule has been pushed) - so it's possible to play deep into
-// your 40s like a handful of real greats, or flame out at 29.
+// your 40s like a handful of real greats, or flame out at 29. A sparse,
+// random pool of life events (see LIFE_EVENTS) adds narrative texture on
+// top of all this - most seasons have none, but every so often something
+// - good, bad, or just funny - shows up and nudges the season a little.
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
-// ---------- Attribute drift ----------
+// ---------- Attribute development & decline ----------
 //
-// How a season nudges the player's *actual* attributes going into the
-// next one - additive, not a multiplier, and applied uniformly across
-// all 8 attributes for simplicity. This is what replaces the old fixed
-// age-curve: a young player still trends upward by default, a player in
-// their 30s trends downward by default, but training intensity, how the
-// season actually went, and injuries all shift that up or down - a
-// well-managed veteran can keep growing well past a real player's
-// typical peak, and a recklessly pushed young player can start
-// declining early.
+// The drafted attributes are a *potential ceiling*, not a starting
+// point - a player this good doesn't show up fully formed at 18. Actual
+// current attributes start noticeably below that ceiling and close the
+// gap season by season while developing, so a loaded draft still means
+// real (if limited) success early rather than either immediate
+// dominance or several years of being nothing special. Training
+// intensity controls how fast that gap closes. Once a player crosses
+// into decline, the same attributes drift back down from wherever they
+// peaked - and *when* decline starts isn't fixed at 30: it moves earlier
+// the more consistently hard training has been pushed across the
+// career, later for a more conservatively managed one.
+const START_POTENTIAL_FRACTION = 0.75;
 
-/** The age-driven default trend, before training/outcome/injury adjust it. */
-function ageDriftBias(age) {
-  if (age <= 21) return 2.0;
-  if (age <= 24) return 1.0;
-  if (age <= 27) return 0;
-  if (age <= 30) return -0.5;
-  if (age <= 33) return -1.5;
-  if (age <= 36) return -2.5;
-  return -4.0;
+/** How much of the remaining gap to potential closes this season - training-driven. */
+function developmentCloseFraction(trainingIntensity) {
+  return 0.15 + (trainingIntensity / 100) * 0.25; // 0.15 - 0.40
 }
 
-/** Harder training pushes growth higher, but undertraining lets sharpness slip. */
-function trainingDriftBonus(trainingIntensity) {
-  return (trainingIntensity / 100) * 2.8 - 1.2;
+/**
+ * The age decline starts at, given the average training intensity
+ * across every season played so far - averaging 100 intensity the whole
+ * career pulls decline in years earlier than averaging a light, careful
+ * load. Clamped to a believable range either way.
+ */
+function declineOnsetAge(avgTrainingIntensitySoFar) {
+  return clamp(30 - (avgTrainingIntensitySoFar - 50) / 8, 24, 34);
+}
+
+/** How much attributes fall this season once past decline onset - training still helps a little, but risk lives in the injury odds instead. */
+function declineAmount(age, onsetAge, trainingIntensity) {
+  const yearsPast = age - onsetAge;
+  const base = -(1.5 + yearsPast * 0.35);
+  const trainingOffset = ((trainingIntensity / 100) * 2.8 - 1.2) * 0.4;
+  return base + trainingOffset;
 }
 
 /** A strong season builds confidence/form; a real decline off a prior peak erodes it. */
@@ -75,30 +93,53 @@ function outcomeDriftBonus(ranking, priorPeakRanking) {
   return 0;
 }
 
-function computeAttributeDrift({
+/**
+ * Computes next season's currentAttributes directly (not a flat delta -
+ * each attribute closes its own gap to its own potential at its own
+ * pace). `potentialAttributes` is the drafted build (the ceiling);
+ * `currentAttributes` is where the player actually is right now.
+ */
+function developAttributes({
+  currentAttributes,
+  potentialAttributes,
   age,
   trainingIntensity,
   ranking,
   priorPeakRanking,
   injured,
+  avgTrainingIntensitySoFar,
 }) {
-  const noise = (Math.random() - 0.5) * 2; // +/- 1, keeps outcomes from feeling too formulaic
-  const total =
-    ageDriftBias(age) +
-    trainingDriftBonus(trainingIntensity) +
-    outcomeDriftBonus(ranking, priorPeakRanking) +
-    (injured ? -4 : 0) +
-    noise;
-  return Math.round(total);
-}
+  const onsetAge = declineOnsetAge(avgTrainingIntensitySoFar);
+  const developing = age < onsetAge;
+  const outcome = outcomeDriftBonus(ranking, priorPeakRanking);
 
-/** Applies a flat drift amount to every attribute, clamped to the roster's real range (1-110). */
-function applyDrift(attributes, drift) {
   const result = {};
   for (const key of ATTRIBUTE_KEYS) {
-    result[key] = clamp(attributes[key] + drift, 1, 110);
+    const noise = (Math.random() - 0.5) * 1.5;
+    if (developing) {
+      if (injured) {
+        result[key] = clamp(Math.round(currentAttributes[key] + noise - 2), 1, 110);
+        continue;
+      }
+      const gap = potentialAttributes[key] - currentAttributes[key];
+      const progress = gap * developmentCloseFraction(trainingIntensity);
+      result[key] = clamp(
+        Math.round(currentAttributes[key] + progress + outcome * 0.5 + noise),
+        1,
+        110
+      );
+    } else {
+      const decline = declineAmount(age, onsetAge, trainingIntensity);
+      result[key] = clamp(
+        Math.round(
+          currentAttributes[key] + decline + outcome * 0.3 + (injured ? -3 : 0) + noise
+        ),
+        1,
+        110
+      );
+    }
   }
-  return result;
+  return { attributes: result, onsetAge, developing };
 }
 
 /** A one-season dip from playing hurt - temporary, doesn't affect the attributes carried into next season. */
@@ -458,13 +499,467 @@ function buildLegacyBreakdown(season, priorPeakRanking) {
   return entries;
 }
 
+// ---------- Life events ----------
+//
+// A sparse, random pool of off-court narrative moments - not a strategic
+// lever like the sliders, just texture that makes one simulated career
+// feel different from the next. Only offered some of the time (see
+// LIFE_EVENT_CHANCE, checked by the UI before calling pickLifeEvent) and
+// each is a binary choice with a small, real effect - a modest attribute
+// nudge and/or a direct Legacy Score adjustment - never anything as
+// large as a Slam title's worth of Legacy. Deliberately a mix of
+// wholesome, dramatic, and funny, the way an actual life spent mostly on
+// an airplane between tournaments would be.
+export const LIFE_EVENTS = [
+  {
+    id: "breakup",
+    prompt: "A long relationship ends mid-season, blindsided by the travel schedule.",
+    options: [
+      {
+        id: "bury",
+        label: "Bury yourself in training to cope",
+        description: "+2 Power, +1 Movement - but -3 Mental Toughness this season.",
+        attributeDelta: { power: 2, movement: 1, mentalToughness: -3 },
+      },
+      {
+        id: "process",
+        label: "Take real time to process it",
+        description: "-1 Mental Toughness now, but a small Legacy bump for the growth.",
+        attributeDelta: { mentalToughness: -1 },
+        legacyDelta: 5,
+      },
+    ],
+  },
+  {
+    id: "newRelationship",
+    prompt: "A new relationship starts, and it is going well.",
+    options: [
+      {
+        id: "balance",
+        label: "Let it steady you",
+        description: "+3 Mental Toughness from the stability.",
+        attributeDelta: { mentalToughness: 3 },
+      },
+      {
+        id: "distracted",
+        label: "Admit the travel makes it complicated",
+        description: "+1 Mental Toughness, smaller but no downside.",
+        attributeDelta: { mentalToughness: 1 },
+      },
+    ],
+  },
+  {
+    id: "newborn",
+    prompt: "You and your partner welcome a first child this offseason.",
+    options: [
+      {
+        id: "home",
+        label: "Cut the offseason short to be home",
+        description:
+          "+3 Mental Toughness from the perspective shift - but -1 Power, -1 Movement from lost training time.",
+        attributeDelta: { mentalToughness: 3, power: -1, movement: -1 },
+      },
+      {
+        id: "grind",
+        label: "Stick to the training block, video-call every night",
+        description: "No stat change - but a Legacy hit for missing the moment.",
+        attributeDelta: {},
+        legacyDelta: -10,
+      },
+    ],
+  },
+  {
+    id: "kidsOnTour",
+    prompt: "Your kids join the tour for the summer swing.",
+    options: [
+      {
+        id: "present",
+        label: "Make every free hour about them",
+        description: "+3 Mental Toughness - but -1 Power from the lighter training load.",
+        attributeDelta: { mentalToughness: 3, power: -1 },
+      },
+      {
+        id: "focused",
+        label: "Keep the routine tight, family time in the margins",
+        description: "+1 Power, +1 Movement - but -1 Mental Toughness.",
+        attributeDelta: { power: 1, movement: 1, mentalToughness: -1 },
+      },
+    ],
+  },
+  {
+    id: "viralMoment",
+    prompt: "A trick shot from your last match goes viral overnight.",
+    options: [
+      {
+        id: "lean-in",
+        label: "Lean into the spotlight",
+        description:
+          "+2 Mental Toughness from the confidence boost - small Legacy bump too.",
+        attributeDelta: { mentalToughness: 2 },
+        legacyDelta: 5,
+      },
+      {
+        id: "ignore",
+        label: "Mute the notifications and get back to work",
+        description: "+1 Power, +1 Movement from the extra focus.",
+        attributeDelta: { power: 1, movement: 1 },
+      },
+    ],
+  },
+  {
+    id: "rivalFeud",
+    prompt: "A public war of words breaks out with a rival on tour.",
+    options: [
+      {
+        id: "fuel",
+        label: "Use it as motivation",
+        description: "+2 Mental Toughness, +1 Power.",
+        attributeDelta: { mentalToughness: 2, power: 1 },
+      },
+      {
+        id: "rise-above",
+        label: "Refuse to engage publicly",
+        description: "+3 Mental Toughness from the composure - a modest Legacy bump.",
+        attributeDelta: { mentalToughness: 3 },
+        legacyDelta: 5,
+      },
+    ],
+  },
+  {
+    id: "codeViolation",
+    prompt: "A blown call sparks a heated code-violation controversy.",
+    options: [
+      {
+        id: "blow-up",
+        label: "Let it all out on camera",
+        description:
+          "-3 Mental Toughness this season - and a Legacy hit for the headlines.",
+        attributeDelta: { mentalToughness: -3 },
+        legacyDelta: -8,
+      },
+      {
+        id: "cold",
+        label: "Stay ice-cold and let the racquet do the talking",
+        description: "+3 Mental Toughness.",
+        attributeDelta: { mentalToughness: 3 },
+      },
+    ],
+  },
+  {
+    id: "sponsorWindfall",
+    prompt: "A major new sponsor comes in with a life-changing deal.",
+    options: [
+      {
+        id: "reinvest",
+        label: "Reinvest it all into your training team",
+        description: "+2 Power, +2 Movement.",
+        attributeDelta: { power: 2, movement: 2 },
+      },
+      {
+        id: "enjoy",
+        label: "Actually enjoy some of it for once",
+        description: "+2 Mental Toughness from the peace of mind.",
+        attributeDelta: { mentalToughness: 2 },
+      },
+    ],
+  },
+  {
+    id: "sponsorDrop",
+    prompt: "A sponsor quietly drops you after a rough stretch of results.",
+    options: [
+      {
+        id: "chip",
+        label: "Let it put a chip on your shoulder",
+        description: "+2 Mental Toughness, +1 Power - proving them wrong.",
+        attributeDelta: { mentalToughness: 2, power: 1 },
+      },
+      {
+        id: "sting",
+        label: "Admit it stings more than expected",
+        description: "-2 Mental Toughness this season.",
+        attributeDelta: { mentalToughness: -2 },
+      },
+    ],
+  },
+  {
+    id: "documentaryCrew",
+    prompt: "A documentary crew starts following you for a season-long feature.",
+    options: [
+      {
+        id: "open",
+        label: "Let them in completely",
+        description:
+          "+2 Mental Toughness from the accountability - a Legacy bump for the story it tells.",
+        attributeDelta: { mentalToughness: 2 },
+        legacyDelta: 8,
+      },
+      {
+        id: "guarded",
+        label: "Keep them at arm's length",
+        description: "No stat change, no risk either way.",
+        attributeDelta: {},
+      },
+    ],
+  },
+  {
+    id: "mentorYoungster",
+    prompt: "A teenage prospect asks you to be an informal mentor.",
+    options: [
+      {
+        id: "yes",
+        label: "Take them under your wing",
+        description:
+          "+2 Mental Toughness from the perspective - a Legacy bump for giving back.",
+        attributeDelta: { mentalToughness: 2 },
+        legacyDelta: 10,
+      },
+      {
+        id: "no",
+        label: "Stay focused on your own career for now",
+        description: "+1 Power, +1 Movement from the undivided focus.",
+        attributeDelta: { power: 1, movement: 1 },
+      },
+    ],
+  },
+  {
+    id: "familyHealthScare",
+    prompt: "A health scare in the family pulls your focus away from the tour.",
+    options: [
+      {
+        id: "go-home",
+        label: "Drop everything and go home",
+        description:
+          "-2 Power, -2 Movement this season from the lost training time - a Legacy bump for the choice.",
+        attributeDelta: { power: -2, movement: -2 },
+        legacyDelta: 6,
+      },
+      {
+        id: "stay",
+        label: "Stay on tour, support from a distance",
+        description: "-2 Mental Toughness from the guilt.",
+        attributeDelta: { mentalToughness: -2 },
+      },
+    ],
+  },
+  {
+    id: "newCoachChemistry",
+    prompt:
+      "A new coach brings a completely different philosophy - and real early friction.",
+    options: [
+      {
+        id: "trust",
+        label: "Trust the process anyway",
+        description:
+          "+2 Forehand, +2 Backhand - but -1 Mental Toughness through the adjustment.",
+        attributeDelta: { forehand: 2, backhand: 2, mentalToughness: -1 },
+      },
+      {
+        id: "part-ways",
+        label: "Part ways before it goes further",
+        description: "No stat change, no risk either way.",
+        attributeDelta: {},
+      },
+    ],
+  },
+  {
+    id: "equipmentSwitch",
+    prompt: "A boutique racquet brand offers a wildly lucrative equipment deal.",
+    options: [
+      {
+        id: "switch",
+        label: "Make the switch",
+        description: "+3 Power - but -2 Forehand, -2 Backhand while adjusting.",
+        attributeDelta: { power: 3, forehand: -2, backhand: -2 },
+      },
+      {
+        id: "loyal",
+        label: "Stay loyal to what has always worked",
+        description: "No stat change, no risk either way.",
+        attributeDelta: {},
+      },
+    ],
+  },
+  {
+    id: "hometownParade",
+    prompt: "Your hometown throws a parade after your best season yet.",
+    options: [
+      {
+        id: "soak-in",
+        label: "Soak it all in",
+        description:
+          "+3 Mental Toughness - and a real Legacy bump for what it means back home.",
+        attributeDelta: { mentalToughness: 3 },
+        legacyDelta: 10,
+      },
+      {
+        id: "back-to-work",
+        label: "Thank everyone briefly and get back to training",
+        description: "+1 Power, +1 Movement from staying locked in.",
+        attributeDelta: { power: 1, movement: 1 },
+      },
+    ],
+  },
+  {
+    id: "bettingRumor",
+    prompt:
+      "An anonymous, unfounded match-fixing rumor spreads online before quickly being debunked.",
+    options: [
+      {
+        id: "shake-off",
+        label: "Shake it off and stay focused",
+        description: "+2 Mental Toughness from the resilience.",
+        attributeDelta: { mentalToughness: 2 },
+      },
+      {
+        id: "rattled",
+        label: "Admit it got under your skin more than it should have",
+        description: "-2 Mental Toughness this season.",
+        attributeDelta: { mentalToughness: -2 },
+      },
+    ],
+  },
+  {
+    id: "fashionIcon",
+    prompt: "A bold on-court outfit choice makes you a minor fashion moment.",
+    options: [
+      {
+        id: "embrace",
+        label: "Embrace the new persona",
+        description: "+2 Mental Toughness from the confidence - a small Legacy bump.",
+        attributeDelta: { mentalToughness: 2 },
+        legacyDelta: 4,
+      },
+      {
+        id: "tennis-first",
+        label: "Keep the focus strictly on tennis",
+        description: "+1 Power, +1 Movement.",
+        attributeDelta: { power: 1, movement: 1 },
+      },
+    ],
+  },
+  {
+    id: "charityExhibition",
+    prompt:
+      "You organize a charity exhibition that raises real money for a cause you care about.",
+    options: [
+      {
+        id: "host",
+        label: "Make it an annual tradition",
+        description: "A real Legacy bump for the impact - +1 Mental Toughness.",
+        attributeDelta: { mentalToughness: 1 },
+        legacyDelta: 15,
+      },
+      {
+        id: "one-off",
+        label: "Keep it a one-time thing this year",
+        description: "A modest Legacy bump, no stat change.",
+        attributeDelta: {},
+        legacyDelta: 6,
+      },
+    ],
+  },
+  {
+    id: "languageImmersion",
+    prompt: "An offseason spent immersed in a new language opens doors internationally.",
+    options: [
+      {
+        id: "commit",
+        label: "Commit to full immersion",
+        description:
+          "+2 Mental Toughness from the discipline - a Legacy bump for the global reach.",
+        attributeDelta: { mentalToughness: 2 },
+        legacyDelta: 6,
+      },
+      {
+        id: "casual",
+        label: "Keep it casual, focus stays on tennis",
+        description: "+1 Power, +1 Movement from the extra training time.",
+        attributeDelta: { power: 1, movement: 1 },
+      },
+    ],
+  },
+  {
+    id: "retirementScare",
+    prompt:
+      "A scary-looking fall in practice turns out to be a minor scare, nothing more.",
+    options: [
+      {
+        id: "grateful",
+        label: "Let the relief refocus you",
+        description: "+2 Mental Toughness, +1 Movement.",
+        attributeDelta: { mentalToughness: 2, movement: 1 },
+      },
+      {
+        id: "shaken",
+        label: "Admit it shook your confidence a little",
+        description: "-2 Mental Toughness this season.",
+        attributeDelta: { mentalToughness: -2 },
+      },
+    ],
+  },
+];
+
+const LIFE_EVENT_CHANCE = 0.22;
+
+/**
+ * Randomly offers one life event from the pool, avoiding an immediate
+ * repeat of the previous one (by id) so back-to-back events don't feel
+ * identical. Call is gated by LIFE_EVENT_CHANCE - most seasons should
+ * have no event at all.
+ */
+export function pickLifeEvent(excludePreviousId = null) {
+  const pool = excludePreviousId
+    ? LIFE_EVENTS.filter((event) => event.id !== excludePreviousId)
+    : LIFE_EVENTS;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/** Whether a life event should even be offered this season - most seasons should not have one. */
+export function shouldOfferLifeEvent() {
+  return Math.random() < LIFE_EVENT_CHANCE;
+}
+
+/**
+ * Bundles a chosen option with its parent event's prompt text, in the
+ * shape simulateNextSeason expects as its `lifeEvent` argument.
+ */
+export function resolveLifeEventChoice(event, option) {
+  return { ...option, eventPrompt: event.prompt };
+}
+
+/** Applies a life event's attribute nudges on top of a season's effective attributes. */
+function applyLifeEventAttributeDelta(attributes, delta) {
+  if (!delta) return attributes;
+  const result = { ...attributes };
+  for (const key of ATTRIBUTE_KEYS) {
+    if (delta[key]) {
+      result[key] = clamp(Math.round(result[key] + delta[key]), 1, 110);
+    }
+  }
+  return result;
+}
+
 // ---------- Career state (mirrors draft.js's pure-state-machine pattern) ----------
 
-/** Starts a new career at age 18 with exactly the drafted attributes - no automatic "too young" discount. */
+/**
+ * Starts a new career at age 18. `baseAttributes` (the draft) is kept as
+ * the player's *potential* - currentAttributes starts at a fraction of
+ * it (see START_POTENTIAL_FRACTION), representing a talented but still-
+ * developing 18-year-old, and closes that gap over the early career (see
+ * developAttributes).
+ */
 export function createCareerState(baseAttributes) {
+  const currentAttributes = {};
+  for (const key of ATTRIBUTE_KEYS) {
+    currentAttributes[key] = clamp(
+      Math.round(baseAttributes[key] * START_POTENTIAL_FRACTION),
+      1,
+      99
+    );
+  }
   return {
     baseAttributes,
-    currentAttributes: { ...baseAttributes },
+    currentAttributes,
     age: 18,
     retired: false,
     retirementReason: null, // null | "voluntary" | "career-ending-injury" | "age-limit"
@@ -482,6 +977,9 @@ const HARD_AGE_CAP = 44;
  * the original draft) as this season's baseline strength. `sliders`
  * (training/schedule intensity, both 0-100) are set fresh for this call -
  * the UI is expected to let the player adjust them before every season.
+ * `lifeEvent` is optional - one of LIFE_EVENTS' chosen options (see
+ * resolveLifeEventChoice), whose small attributeDelta/legacyDelta apply
+ * on top of everything else this season.
  *
  * The career only ends here two ways: a hard age cap (44) or a rare
  * career-ending injury, whose odds rise with accumulated injuries and
@@ -489,7 +987,12 @@ const HARD_AGE_CAP = 44;
  * plays out and `retired` stays false - ending the career the rest of
  * the time is the player's own call (see retireNow).
  */
-export function simulateNextSeason(state, playerPool, sliders = DEFAULT_SLIDERS) {
+export function simulateNextSeason(
+  state,
+  playerPool,
+  sliders = DEFAULT_SLIDERS,
+  lifeEvent = null
+) {
   if (state.retired) {
     throw new Error(
       "Cannot simulate a season: this career has already ended in retirement"
@@ -499,8 +1002,12 @@ export function simulateNextSeason(state, playerPool, sliders = DEFAULT_SLIDERS)
   const age = state.age;
   const { trainingIntensity, scheduleIntensity } = sliders;
 
+  const attributesAfterLifeEvent = lifeEvent?.attributeDelta
+    ? applyLifeEventAttributeDelta(state.currentAttributes, lifeEvent.attributeDelta)
+    : state.currentAttributes;
+
   const injuryChance = seasonInjuryChance({
-    attributes: state.currentAttributes,
+    attributes: attributesAfterLifeEvent,
     trainingIntensity,
     scheduleIntensity,
     age,
@@ -513,8 +1020,8 @@ export function simulateNextSeason(state, playerPool, sliders = DEFAULT_SLIDERS)
       }
     : null;
   const seasonAttributes = injured
-    ? applyInjuryImpact(state.currentAttributes, 0.85)
-    : state.currentAttributes;
+    ? applyInjuryImpact(attributesAfterLifeEvent, 0.85)
+    : attributesAfterLifeEvent;
 
   const slams = SLAM_CALENDAR.map((slam) =>
     simulateSlam(seasonAttributes, slam, playerPool)
@@ -543,6 +1050,8 @@ export function simulateNextSeason(state, playerPool, sliders = DEFAULT_SLIDERS)
     trainingIntensity,
     scheduleIntensity,
     injury,
+    lifeEventPrompt: lifeEvent ? lifeEvent.eventPrompt : null,
+    lifeEventChoice: lifeEvent ? lifeEvent.label : null,
     slams,
     slamTitles,
     masterTitles: nonSlam.masterTitles,
@@ -581,20 +1090,30 @@ export function simulateNextSeason(state, playerPool, sliders = DEFAULT_SLIDERS)
   }
 
   const legacyBreakdown = buildLegacyBreakdown(season, priorPeakRanking);
+  if (lifeEvent?.legacyDelta) {
+    legacyBreakdown.push({ label: lifeEvent.label, amount: lifeEvent.legacyDelta });
+  }
   const legacyDelta = legacyBreakdown.reduce((sum, entry) => sum + entry.amount, 0);
   season.legacyDelta = legacyDelta;
   season.legacyBreakdown = legacyBreakdown;
 
   const nextLegacyScore = state.legacyScore + legacyDelta;
 
-  const drift = computeAttributeDrift({
+  const priorTrainingIntensities = state.seasons.map((s) => s.trainingIntensity);
+  const avgTrainingIntensitySoFar =
+    [...priorTrainingIntensities, trainingIntensity].reduce((sum, v) => sum + v, 0) /
+    (priorTrainingIntensities.length + 1);
+
+  const { attributes: nextCurrentAttributes } = developAttributes({
+    currentAttributes: attributesAfterLifeEvent,
+    potentialAttributes: state.baseAttributes,
     age,
     trainingIntensity,
     ranking,
     priorPeakRanking,
     injured,
+    avgTrainingIntensitySoFar,
   });
-  const nextCurrentAttributes = applyDrift(state.currentAttributes, drift);
 
   return {
     ...state,

@@ -1178,6 +1178,99 @@ button {
   color: var(--muted);
 }
 
+.season-life-event-line {
+  margin: 0 0 10px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* ---------- Life events ---------- */
+.life-event-card {
+  width: 100%;
+  background: var(--ink-panel);
+  border: 1px solid var(--clay-orange);
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.life-event-kicker {
+  margin: 0 0 6px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--clay-orange);
+}
+
+.life-event-prompt {
+  margin: 0 0 16px;
+  font-size: 1rem;
+}
+
+.life-event-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.life-event-option {
+  background: var(--ink);
+  border: 1px solid var(--ink-panel-light);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.life-event-option:hover {
+  border-color: var(--clay-orange);
+}
+
+.life-event-option.selected {
+  border-color: var(--ball);
+  background: var(--ink-panel-light);
+}
+
+.life-event-option strong {
+  font-size: 0.9rem;
+}
+
+.life-event-option span {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* ---------- Age 30 reminder ---------- */
+.age30-reminder {
+  width: 100%;
+  background: var(--ink-panel);
+  border: 1px solid var(--tier-legend);
+  border-radius: 16px;
+  padding: 18px 20px;
+  margin-bottom: 12px;
+  text-align: left;
+}
+
+.age30-reminder-title {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  color: var(--tier-legend);
+}
+
+.age30-reminder p:not(.age30-reminder-title) {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .simulating-indicator {
   padding: 40px 0;
   display: flex;
