@@ -40,6 +40,19 @@ import { computeSurfaceStrength } from "./scoring.js";
 // random pool of life events (see LIFE_EVENTS) adds narrative texture on
 // top of all this - most seasons have none, but every so often something
 // - good, bad, or just funny - shows up and nudges the season a little.
+//
+// Injury risk is age-scaled, not just slider-scaled (see
+// seasonInjuryChance): the same training/schedule intensity is a much
+// safer bet at 19 than at 34, so going all-out young and tapering off
+// later is a real, rewarded strategy rather than a uniform risk the whole
+// career. Coming back at the same intensity right after an injury carries
+// its own surcharge (recoveryRiskBump) - backing sliders off first is
+// what the game actually wants you to do. A well-managed, conservative
+// career can also push decline onset out to the late 30s (see
+// declineOnsetAge), so a genuine late-career prime is a reachable reward
+// for good management, not just a rare fluke. simulateFullCareer runs all
+// of this unattended with a sensible autopilot, for a "quick sim" straight
+// to a final result instead of setting sliders every season by hand.
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -69,17 +82,20 @@ function developmentCloseFraction(trainingIntensity) {
  * The age decline starts at, given the average training intensity
  * across every season played so far - averaging 100 intensity the whole
  * career pulls decline in years earlier than averaging a light, careful
- * load. Clamped to a believable range either way.
+ * load. Widened at the top end (37, not 34) so a genuinely conservative,
+ * well-managed career can stay in its prime deep into its 30s, the way a
+ * handful of real greats have - late-career success is meant to be a
+ * real, reachable reward for smart management, not just a rare fluke.
  */
 function declineOnsetAge(avgTrainingIntensitySoFar) {
-  return clamp(30 - (avgTrainingIntensitySoFar - 50) / 8, 24, 34);
+  return clamp(31 - (avgTrainingIntensitySoFar - 50) / 7, 24, 37);
 }
 
-/** How much attributes fall this season once past decline onset - training still helps a little, but risk lives in the injury odds instead. */
+/** How much attributes fall this season once past decline onset - training still helps meaningfully, but risk lives in the injury odds instead. */
 function declineAmount(age, onsetAge, trainingIntensity) {
   const yearsPast = age - onsetAge;
-  const base = -(1.5 + yearsPast * 0.35);
-  const trainingOffset = ((trainingIntensity / 100) * 2.8 - 1.2) * 0.4;
+  const base = -(1.1 + yearsPast * 0.24);
+  const trainingOffset = ((trainingIntensity / 100) * 2.8 - 1.0) * 0.45;
   return base + trainingOffset;
 }
 
@@ -118,7 +134,7 @@ function developAttributes({
     const noise = (Math.random() - 0.5) * 1.5;
     if (developing) {
       if (injured) {
-        result[key] = clamp(Math.round(currentAttributes[key] + noise - 2), 1, 110);
+        result[key] = clamp(Math.round(currentAttributes[key] + noise - 1), 1, 110);
         continue;
       }
       const gap = potentialAttributes[key] - currentAttributes[key];
@@ -132,7 +148,7 @@ function developAttributes({
       const decline = declineAmount(age, onsetAge, trainingIntensity);
       result[key] = clamp(
         Math.round(
-          currentAttributes[key] + decline + outcome * 0.3 + (injured ? -3 : 0) + noise
+          currentAttributes[key] + decline + outcome * 0.3 + (injured ? -1.5 : 0) + noise
         ),
         1,
         110
@@ -169,13 +185,47 @@ function eventCountsForSchedule(scheduleIntensity) {
   };
 }
 
-function seasonInjuryChance({ attributes, trainingIntensity, scheduleIntensity, age }) {
+/**
+ * How much an injury the *previous* season should still weigh on this
+ * season's risk. Coming back at the same intensity you got hurt at is
+ * genuinely riskier; backing both sliders off meaningfully first - the
+ * "adjust it lower coming off an injury" the sliders are meant to model -
+ * removes the surcharge almost entirely, and backing off a lot is treated
+ * as a smart, careful return.
+ */
+function recoveryRiskBump(lastSeason, trainingIntensity, scheduleIntensity) {
+  if (!lastSeason?.injury) return 0;
+  const easedBy =
+    Math.max(0, lastSeason.trainingIntensity - trainingIntensity) +
+    Math.max(0, lastSeason.scheduleIntensity - scheduleIntensity);
+  if (easedBy >= 25) return -0.02;
+  if (easedBy >= 10) return 0.01;
+  return 0.06;
+}
+
+/**
+ * Injury odds scale with age, not just the sliders - a teenager training
+ * and playing flat-out carries real but modest risk, the same intensity
+ * in your mid-30s is a genuinely different bet. This is what makes "go
+ * hard while young, dial it back once age works against you" an actual
+ * lever rather than flavor text: the same slider settings mean different
+ * things depending on when you use them.
+ */
+function seasonInjuryChance({
+  attributes,
+  trainingIntensity,
+  scheduleIntensity,
+  age,
+  lastSeason,
+}) {
   const physicalIntensity = (attributes.power + attributes.movement) / 2;
-  const base = 0.03 + (physicalIntensity / 99) * 0.05;
-  const trainingRisk = Math.pow(trainingIntensity / 100, 1.5) * 0.12;
-  const scheduleRisk = Math.pow(scheduleIntensity / 100, 1.5) * 0.1;
-  const ageRisk = Math.max(0, (age - 30) * 0.008);
-  return clamp(base + trainingRisk + scheduleRisk + ageRisk, 0.02, 0.55);
+  const base = 0.02 + (physicalIntensity / 99) * 0.03;
+  const ageRiskMultiplier = clamp(0.55 + (age - 18) * 0.035, 0.55, 1.5);
+  const trainingRisk = Math.pow(trainingIntensity / 100, 1.5) * 0.08 * ageRiskMultiplier;
+  const scheduleRisk = Math.pow(scheduleIntensity / 100, 1.5) * 0.065 * ageRiskMultiplier;
+  const ageRisk = Math.max(0, (age - 32) * 0.006);
+  const recovery = recoveryRiskBump(lastSeason, trainingIntensity, scheduleIntensity);
+  return clamp(base + trainingRisk + scheduleRisk + ageRisk + recovery, 0.015, 0.4);
 }
 
 /**
@@ -183,7 +233,8 @@ function seasonInjuryChance({ attributes, trainingIntensity, scheduleIntensity, 
  * only rolled when an injury has already happened. Rises with how many
  * injuries have already piled up and with how hard training/schedule
  * have been pushed, which is what makes "flame out young" a real,
- * chosen-into outcome rather than pure bad luck.
+ * chosen-into outcome rather than pure bad luck - but stays rare enough
+ * overall that most injuries are just a rough season, not the end.
  */
 function catastrophicInjuryChance({
   injuryCountSoFar,
@@ -191,10 +242,10 @@ function catastrophicInjuryChance({
   scheduleIntensity,
 }) {
   return Math.min(
-    0.28,
-    injuryCountSoFar * 0.03 +
-      (trainingIntensity / 100) * 0.06 +
-      (scheduleIntensity / 100) * 0.045
+    0.2,
+    injuryCountSoFar * 0.02 +
+      (trainingIntensity / 100) * 0.045 +
+      (scheduleIntensity / 100) * 0.035
   );
 }
 
@@ -518,15 +569,15 @@ export const LIFE_EVENTS = [
       {
         id: "bury",
         label: "Bury yourself in training to cope",
-        description: "+2 Power, +1 Movement - but -3 Mental Toughness this season.",
-        attributeDelta: { power: 2, movement: 1, mentalToughness: -3 },
+        description: "+3 Power, +2 Movement - but -5 Mental Toughness this season.",
+        attributeDelta: { power: 3, movement: 2, mentalToughness: -5 },
       },
       {
         id: "process",
         label: "Take real time to process it",
-        description: "-1 Mental Toughness now, but a small Legacy bump for the growth.",
-        attributeDelta: { mentalToughness: -1 },
-        legacyDelta: 5,
+        description: "-2 Mental Toughness now, but a small Legacy bump for the growth.",
+        attributeDelta: { mentalToughness: -2 },
+        legacyDelta: 8,
       },
     ],
   },
@@ -537,14 +588,14 @@ export const LIFE_EVENTS = [
       {
         id: "balance",
         label: "Let it steady you",
-        description: "+3 Mental Toughness from the stability.",
-        attributeDelta: { mentalToughness: 3 },
+        description: "+5 Mental Toughness from the stability.",
+        attributeDelta: { mentalToughness: 5 },
       },
       {
         id: "distracted",
         label: "Admit the travel makes it complicated",
-        description: "+1 Mental Toughness, smaller but no downside.",
-        attributeDelta: { mentalToughness: 1 },
+        description: "+2 Mental Toughness, smaller but no downside.",
+        attributeDelta: { mentalToughness: 2 },
       },
     ],
   },
@@ -556,15 +607,15 @@ export const LIFE_EVENTS = [
         id: "home",
         label: "Cut the offseason short to be home",
         description:
-          "+3 Mental Toughness from the perspective shift - but -1 Power, -1 Movement from lost training time.",
-        attributeDelta: { mentalToughness: 3, power: -1, movement: -1 },
+          "+5 Mental Toughness from the perspective shift - but -2 Power, -2 Movement from lost training time.",
+        attributeDelta: { mentalToughness: 5, power: -2, movement: -2 },
       },
       {
         id: "grind",
         label: "Stick to the training block, video-call every night",
         description: "No stat change - but a Legacy hit for missing the moment.",
         attributeDelta: {},
-        legacyDelta: -10,
+        legacyDelta: -15,
       },
     ],
   },
@@ -575,14 +626,14 @@ export const LIFE_EVENTS = [
       {
         id: "present",
         label: "Make every free hour about them",
-        description: "+3 Mental Toughness - but -1 Power from the lighter training load.",
-        attributeDelta: { mentalToughness: 3, power: -1 },
+        description: "+5 Mental Toughness - but -2 Power from the lighter training load.",
+        attributeDelta: { mentalToughness: 5, power: -2 },
       },
       {
         id: "focused",
         label: "Keep the routine tight, family time in the margins",
-        description: "+1 Power, +1 Movement - but -1 Mental Toughness.",
-        attributeDelta: { power: 1, movement: 1, mentalToughness: -1 },
+        description: "+2 Power, +2 Movement - but -2 Mental Toughness.",
+        attributeDelta: { power: 2, movement: 2, mentalToughness: -2 },
       },
     ],
   },
@@ -594,15 +645,15 @@ export const LIFE_EVENTS = [
         id: "lean-in",
         label: "Lean into the spotlight",
         description:
-          "+2 Mental Toughness from the confidence boost - small Legacy bump too.",
-        attributeDelta: { mentalToughness: 2 },
-        legacyDelta: 5,
+          "+3 Mental Toughness from the confidence boost - small Legacy bump too.",
+        attributeDelta: { mentalToughness: 3 },
+        legacyDelta: 8,
       },
       {
         id: "ignore",
         label: "Mute the notifications and get back to work",
-        description: "+1 Power, +1 Movement from the extra focus.",
-        attributeDelta: { power: 1, movement: 1 },
+        description: "+2 Power, +2 Movement from the extra focus.",
+        attributeDelta: { power: 2, movement: 2 },
       },
     ],
   },
@@ -613,15 +664,15 @@ export const LIFE_EVENTS = [
       {
         id: "fuel",
         label: "Use it as motivation",
-        description: "+2 Mental Toughness, +1 Power.",
-        attributeDelta: { mentalToughness: 2, power: 1 },
+        description: "+3 Mental Toughness, +2 Power.",
+        attributeDelta: { mentalToughness: 3, power: 2 },
       },
       {
         id: "rise-above",
         label: "Refuse to engage publicly",
-        description: "+3 Mental Toughness from the composure - a modest Legacy bump.",
-        attributeDelta: { mentalToughness: 3 },
-        legacyDelta: 5,
+        description: "+5 Mental Toughness from the composure - a modest Legacy bump.",
+        attributeDelta: { mentalToughness: 5 },
+        legacyDelta: 8,
       },
     ],
   },
@@ -633,15 +684,15 @@ export const LIFE_EVENTS = [
         id: "blow-up",
         label: "Let it all out on camera",
         description:
-          "-3 Mental Toughness this season - and a Legacy hit for the headlines.",
-        attributeDelta: { mentalToughness: -3 },
-        legacyDelta: -8,
+          "-5 Mental Toughness this season - and a Legacy hit for the headlines.",
+        attributeDelta: { mentalToughness: -5 },
+        legacyDelta: -12,
       },
       {
         id: "cold",
         label: "Stay ice-cold and let the racquet do the talking",
-        description: "+3 Mental Toughness.",
-        attributeDelta: { mentalToughness: 3 },
+        description: "+5 Mental Toughness.",
+        attributeDelta: { mentalToughness: 5 },
       },
     ],
   },
@@ -652,14 +703,14 @@ export const LIFE_EVENTS = [
       {
         id: "reinvest",
         label: "Reinvest it all into your training team",
-        description: "+2 Power, +2 Movement.",
-        attributeDelta: { power: 2, movement: 2 },
+        description: "+3 Power, +3 Movement.",
+        attributeDelta: { power: 3, movement: 3 },
       },
       {
         id: "enjoy",
         label: "Actually enjoy some of it for once",
-        description: "+2 Mental Toughness from the peace of mind.",
-        attributeDelta: { mentalToughness: 2 },
+        description: "+3 Mental Toughness from the peace of mind.",
+        attributeDelta: { mentalToughness: 3 },
       },
     ],
   },
@@ -670,14 +721,14 @@ export const LIFE_EVENTS = [
       {
         id: "chip",
         label: "Let it put a chip on your shoulder",
-        description: "+2 Mental Toughness, +1 Power - proving them wrong.",
-        attributeDelta: { mentalToughness: 2, power: 1 },
+        description: "+3 Mental Toughness, +2 Power - proving them wrong.",
+        attributeDelta: { mentalToughness: 3, power: 2 },
       },
       {
         id: "sting",
         label: "Admit it stings more than expected",
-        description: "-2 Mental Toughness this season.",
-        attributeDelta: { mentalToughness: -2 },
+        description: "-3 Mental Toughness this season.",
+        attributeDelta: { mentalToughness: -3 },
       },
     ],
   },
@@ -689,9 +740,9 @@ export const LIFE_EVENTS = [
         id: "open",
         label: "Let them in completely",
         description:
-          "+2 Mental Toughness from the accountability - a Legacy bump for the story it tells.",
-        attributeDelta: { mentalToughness: 2 },
-        legacyDelta: 8,
+          "+3 Mental Toughness from the accountability - a Legacy bump for the story it tells.",
+        attributeDelta: { mentalToughness: 3 },
+        legacyDelta: 12,
       },
       {
         id: "guarded",
@@ -709,15 +760,15 @@ export const LIFE_EVENTS = [
         id: "yes",
         label: "Take them under your wing",
         description:
-          "+2 Mental Toughness from the perspective - a Legacy bump for giving back.",
-        attributeDelta: { mentalToughness: 2 },
-        legacyDelta: 10,
+          "+3 Mental Toughness from the perspective - a Legacy bump for giving back.",
+        attributeDelta: { mentalToughness: 3 },
+        legacyDelta: 15,
       },
       {
         id: "no",
         label: "Stay focused on your own career for now",
-        description: "+1 Power, +1 Movement from the undivided focus.",
-        attributeDelta: { power: 1, movement: 1 },
+        description: "+2 Power, +2 Movement from the undivided focus.",
+        attributeDelta: { power: 2, movement: 2 },
       },
     ],
   },
@@ -729,15 +780,15 @@ export const LIFE_EVENTS = [
         id: "go-home",
         label: "Drop everything and go home",
         description:
-          "-2 Power, -2 Movement this season from the lost training time - a Legacy bump for the choice.",
-        attributeDelta: { power: -2, movement: -2 },
-        legacyDelta: 6,
+          "-3 Power, -3 Movement this season from the lost training time - a Legacy bump for the choice.",
+        attributeDelta: { power: -3, movement: -3 },
+        legacyDelta: 9,
       },
       {
         id: "stay",
         label: "Stay on tour, support from a distance",
-        description: "-2 Mental Toughness from the guilt.",
-        attributeDelta: { mentalToughness: -2 },
+        description: "-3 Mental Toughness from the guilt.",
+        attributeDelta: { mentalToughness: -3 },
       },
     ],
   },
@@ -750,8 +801,8 @@ export const LIFE_EVENTS = [
         id: "trust",
         label: "Trust the process anyway",
         description:
-          "+2 Forehand, +2 Backhand - but -1 Mental Toughness through the adjustment.",
-        attributeDelta: { forehand: 2, backhand: 2, mentalToughness: -1 },
+          "+3 Forehand, +3 Backhand - but -2 Mental Toughness through the adjustment.",
+        attributeDelta: { forehand: 3, backhand: 3, mentalToughness: -2 },
       },
       {
         id: "part-ways",
@@ -768,8 +819,8 @@ export const LIFE_EVENTS = [
       {
         id: "switch",
         label: "Make the switch",
-        description: "+3 Power - but -2 Forehand, -2 Backhand while adjusting.",
-        attributeDelta: { power: 3, forehand: -2, backhand: -2 },
+        description: "+5 Power - but -3 Forehand, -3 Backhand while adjusting.",
+        attributeDelta: { power: 5, forehand: -3, backhand: -3 },
       },
       {
         id: "loyal",
@@ -787,15 +838,15 @@ export const LIFE_EVENTS = [
         id: "soak-in",
         label: "Soak it all in",
         description:
-          "+3 Mental Toughness - and a real Legacy bump for what it means back home.",
-        attributeDelta: { mentalToughness: 3 },
-        legacyDelta: 10,
+          "+5 Mental Toughness - and a real Legacy bump for what it means back home.",
+        attributeDelta: { mentalToughness: 5 },
+        legacyDelta: 15,
       },
       {
         id: "back-to-work",
         label: "Thank everyone briefly and get back to training",
-        description: "+1 Power, +1 Movement from staying locked in.",
-        attributeDelta: { power: 1, movement: 1 },
+        description: "+2 Power, +2 Movement from staying locked in.",
+        attributeDelta: { power: 2, movement: 2 },
       },
     ],
   },
@@ -807,14 +858,14 @@ export const LIFE_EVENTS = [
       {
         id: "shake-off",
         label: "Shake it off and stay focused",
-        description: "+2 Mental Toughness from the resilience.",
-        attributeDelta: { mentalToughness: 2 },
+        description: "+3 Mental Toughness from the resilience.",
+        attributeDelta: { mentalToughness: 3 },
       },
       {
         id: "rattled",
         label: "Admit it got under your skin more than it should have",
-        description: "-2 Mental Toughness this season.",
-        attributeDelta: { mentalToughness: -2 },
+        description: "-3 Mental Toughness this season.",
+        attributeDelta: { mentalToughness: -3 },
       },
     ],
   },
@@ -825,15 +876,15 @@ export const LIFE_EVENTS = [
       {
         id: "embrace",
         label: "Embrace the new persona",
-        description: "+2 Mental Toughness from the confidence - a small Legacy bump.",
-        attributeDelta: { mentalToughness: 2 },
-        legacyDelta: 4,
+        description: "+3 Mental Toughness from the confidence - a small Legacy bump.",
+        attributeDelta: { mentalToughness: 3 },
+        legacyDelta: 6,
       },
       {
         id: "tennis-first",
         label: "Keep the focus strictly on tennis",
-        description: "+1 Power, +1 Movement.",
-        attributeDelta: { power: 1, movement: 1 },
+        description: "+2 Power, +2 Movement.",
+        attributeDelta: { power: 2, movement: 2 },
       },
     ],
   },
@@ -845,16 +896,16 @@ export const LIFE_EVENTS = [
       {
         id: "host",
         label: "Make it an annual tradition",
-        description: "A real Legacy bump for the impact - +1 Mental Toughness.",
-        attributeDelta: { mentalToughness: 1 },
-        legacyDelta: 15,
+        description: "A real Legacy bump for the impact - +2 Mental Toughness.",
+        attributeDelta: { mentalToughness: 2 },
+        legacyDelta: 20,
       },
       {
         id: "one-off",
         label: "Keep it a one-time thing this year",
         description: "A modest Legacy bump, no stat change.",
         attributeDelta: {},
-        legacyDelta: 6,
+        legacyDelta: 9,
       },
     ],
   },
@@ -866,15 +917,15 @@ export const LIFE_EVENTS = [
         id: "commit",
         label: "Commit to full immersion",
         description:
-          "+2 Mental Toughness from the discipline - a Legacy bump for the global reach.",
-        attributeDelta: { mentalToughness: 2 },
-        legacyDelta: 6,
+          "+3 Mental Toughness from the discipline - a Legacy bump for the global reach.",
+        attributeDelta: { mentalToughness: 3 },
+        legacyDelta: 9,
       },
       {
         id: "casual",
         label: "Keep it casual, focus stays on tennis",
-        description: "+1 Power, +1 Movement from the extra training time.",
-        attributeDelta: { power: 1, movement: 1 },
+        description: "+2 Power, +2 Movement from the extra training time.",
+        attributeDelta: { power: 2, movement: 2 },
       },
     ],
   },
@@ -886,14 +937,14 @@ export const LIFE_EVENTS = [
       {
         id: "grateful",
         label: "Let the relief refocus you",
-        description: "+2 Mental Toughness, +1 Movement.",
-        attributeDelta: { mentalToughness: 2, movement: 1 },
+        description: "+3 Mental Toughness, +2 Movement.",
+        attributeDelta: { mentalToughness: 3, movement: 2 },
       },
       {
         id: "shaken",
         label: "Admit it shook your confidence a little",
-        description: "-2 Mental Toughness this season.",
-        attributeDelta: { mentalToughness: -2 },
+        description: "-3 Mental Toughness this season.",
+        attributeDelta: { mentalToughness: -3 },
       },
     ],
   },
@@ -1006,11 +1057,13 @@ export function simulateNextSeason(
     ? applyLifeEventAttributeDelta(state.currentAttributes, lifeEvent.attributeDelta)
     : state.currentAttributes;
 
+  const lastSeason = state.seasons[state.seasons.length - 1] ?? null;
   const injuryChance = seasonInjuryChance({
     attributes: attributesAfterLifeEvent,
     trainingIntensity,
     scheduleIntensity,
     age,
+    lastSeason,
   });
   const injured = Math.random() < injuryChance;
   const injury = injured
@@ -1020,7 +1073,7 @@ export function simulateNextSeason(
       }
     : null;
   const seasonAttributes = injured
-    ? applyInjuryImpact(attributesAfterLifeEvent, 0.85)
+    ? applyInjuryImpact(attributesAfterLifeEvent, 0.9)
     : attributesAfterLifeEvent;
 
   const slams = SLAM_CALENDAR.map((slam) =>
@@ -1154,6 +1207,101 @@ export function retireNow(state) {
     retiredOnTop,
     legacyScore: state.legacyScore + bonus,
   };
+}
+
+// ---------- Quick Sim (autopilot) ----------
+//
+// Runs the rest of a career unattended, straight to a final result -
+// for when the point is seeing how a build's career turns out, not
+// setting two sliders every single season by hand. Uses a simple
+// age-aware autopilot: train and schedule hard while young (when the
+// same intensity carries less injury risk - see seasonInjuryChance),
+// taper down through the decline years, and back off further right
+// after an injury, mirroring the exact "ease up coming off an injury"
+// behavior the sliders reward when played by hand. Life events, when
+// offered, get a random pick between the two options rather than a
+// fixed one, so quick-simmed careers stay as varied as manually-played
+// ones. Retirement is a heuristic, not a dice roll: keep playing while
+// still competitive, retire voluntarily - locking in the on-top Legacy
+// bonus - once a real decline has held for more than one season, rather
+// than grinding all the way to the forced age cap.
+
+/** The autopilot's slider choice for the season about to be played. */
+function quickSimAutopilotSliders(state) {
+  const age = state.age;
+  const lastSeason = state.seasons[state.seasons.length - 1] ?? null;
+
+  let trainingIntensity = 55;
+  let scheduleIntensity = 50;
+  if (age < 24) {
+    trainingIntensity = 85;
+    scheduleIntensity = 80;
+  } else if (age < 28) {
+    trainingIntensity = 70;
+    scheduleIntensity = 68;
+  } else if (age < 32) {
+    trainingIntensity = 55;
+    scheduleIntensity = 52;
+  } else if (age < 36) {
+    trainingIntensity = 40;
+    scheduleIntensity = 38;
+  } else {
+    trainingIntensity = 25;
+    scheduleIntensity = 25;
+  }
+
+  if (lastSeason?.injury) {
+    trainingIntensity = Math.max(15, trainingIntensity - 25);
+    scheduleIntensity = Math.max(15, scheduleIntensity - 20);
+  }
+
+  return {
+    trainingIntensity: clamp(trainingIntensity, 10, 100),
+    scheduleIntensity: clamp(scheduleIntensity, 10, 100),
+  };
+}
+
+/** Whether the autopilot should retire this career now rather than play on. */
+function quickSimShouldRetire(state) {
+  if (state.seasons.length < 4) return false;
+  const seasons = state.seasons;
+  const peakRanking = Math.min(...seasons.map((s) => s.ranking));
+  const threshold = Math.max(20, peakRanking * 2.2);
+  const lastTwo = seasons.slice(-2);
+  const decliningBothSeasons = lastTwo.every((s) => s.ranking > threshold);
+  return decliningBothSeasons && state.age >= 30;
+}
+
+/**
+ * Simulates every remaining season of a career unattended, using the
+ * autopilot above for sliders, retirement, and life-event choices, and
+ * returns the final (always-retired) state. Safe to call at any point in
+ * a career - including right at age 18, before a single season has been
+ * played by hand - not just partway through one.
+ */
+export function simulateFullCareer(state, playerPool) {
+  let current = state;
+  let lastEventId = null;
+  const maxIterations = HARD_AGE_CAP - 18 + 2; // safety bound past the hard age cap
+
+  for (let i = 0; i < maxIterations && !current.retired; i++) {
+    const sliders = quickSimAutopilotSliders(current);
+
+    let lifeEvent = null;
+    if (shouldOfferLifeEvent()) {
+      const event = pickLifeEvent(lastEventId);
+      const option = event.options[Math.floor(Math.random() * event.options.length)];
+      lifeEvent = resolveLifeEventChoice(event, option);
+      lastEventId = event.id;
+    }
+
+    current = simulateNextSeason(current, playerPool, sliders, lifeEvent);
+    if (!current.retired && quickSimShouldRetire(current)) {
+      current = retireNow(current);
+    }
+  }
+
+  return current;
 }
 
 /** Aggregate career totals derived from the seasons played so far. */

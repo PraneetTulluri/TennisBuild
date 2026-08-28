@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ATTRIBUTE_KEYS,
@@ -7,6 +7,7 @@ import {
 } from "@tennisbuild/game-engine";
 import { useAuth } from "../context/AuthContext.jsx";
 import { fetchMyBuilds } from "../api/builds.js";
+import { fetchPlayers } from "../api/players.js";
 
 function attributesFromLocked(locked) {
   const result = {};
@@ -14,27 +15,88 @@ function attributesFromLocked(locked) {
   return result;
 }
 
-function GuestHero() {
+// Small Fisher-Yates shuffle - used once per page load to pick which real
+// player photos fill the showcase columns, so the hero looks a little
+// different on repeat visits instead of a fixed lineup baked into the code.
+function shuffled(list) {
+  const result = [...list];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+// A single real player photo in the hero's showcase columns - only ever
+// shown for players with an actual resolved photo (see
+// resolveHeadshots.js), never the illustrated bust fallback, since the
+// whole point here is real, recognizable faces filling out the page rather
+// than an icon standing in for one.
+function ShowcasePortrait({ player, style }) {
   return (
-    <div className="landing-hero">
-      <p className="landing-kicker">🎾 Build-a-Player</p>
-      <h1>TennisBuild</h1>
-      <p className="landing-tagline">
-        Spin the wheel, draft one attribute at a time from real ATP legends and pros, and
-        build a custom tennis player of your own.
-      </p>
-      <Link to="/guide">
-        <button type="button" className="spin-button">
-          Start Build
-        </button>
-      </Link>
-      <p className="landing-secondary-link">
-        <Link to="/builds">View My Builds</Link>
-      </p>
-      <p className="landing-secondary-link">
-        Have an account? <Link to="/login">Log in</Link> to save your progress across
-        devices.
-      </p>
+    <div className={`showcase-portrait tier-${player.tier}`} style={style}>
+      <img src={player.imageUrl} alt={player.name} loading="lazy" />
+      <span className="showcase-portrait-name">{player.name}</span>
+    </div>
+  );
+}
+
+function ShowcaseColumn({ players, side }) {
+  if (players.length === 0) return null;
+  return (
+    <div className={`landing-showcase landing-showcase-${side}`} aria-hidden="true">
+      {players.map((player, i) => (
+        <ShowcasePortrait key={player.slug} player={player} style={{ "--i": i }} />
+      ))}
+    </div>
+  );
+}
+
+function GuestHero() {
+  const [players, setPlayers] = useState([]);
+
+  useEffect(() => {
+    fetchPlayers()
+      .then(setPlayers)
+      .catch(() => setPlayers([]));
+  }, []);
+
+  // A mix of legends and current stars with a real resolved photo, split
+  // across two flanking columns - fills what used to be a lot of empty
+  // gutter on wider screens with the actual roster instead of decoration.
+  const { left, right } = useMemo(() => {
+    const withPhotos = shuffled(players.filter((p) => p.imageUrl));
+    const legends = withPhotos.filter((p) => p.tier === "legend").slice(0, 5);
+    const current = withPhotos.filter((p) => p.tier !== "legend").slice(0, 5);
+    const mixed = shuffled([...legends, ...current]);
+    const half = Math.ceil(mixed.length / 2);
+    return { left: mixed.slice(0, half), right: mixed.slice(half) };
+  }, [players]);
+
+  return (
+    <div className="landing-hero-row">
+      <ShowcaseColumn players={left} side="left" />
+      <div className="landing-hero">
+        <p className="landing-kicker">Build-a-Player</p>
+        <h1>TennisBuild</h1>
+        <p className="landing-tagline">
+          Spin the wheel, draft one attribute at a time from real ATP legends and pros,
+          and build a custom tennis player of your own.
+        </p>
+        <Link to="/guide">
+          <button type="button" className="spin-button">
+            Start Build
+          </button>
+        </Link>
+        <p className="landing-secondary-link">
+          <Link to="/builds">View My Builds</Link>
+        </p>
+        <p className="landing-secondary-link">
+          Have an account? <Link to="/login">Log in</Link> to save your progress across
+          devices.
+        </p>
+      </div>
+      <ShowcaseColumn players={right} side="right" />
     </div>
   );
 }
@@ -58,7 +120,7 @@ function Dashboard({ user, builds }) {
 
   return (
     <div className="dashboard-page">
-      <p className="landing-kicker">🎾 Welcome back</p>
+      <p className="landing-kicker">Welcome back</p>
       <h1>{user.name}</h1>
 
       <div className="dashboard-stats">
@@ -141,9 +203,10 @@ function Dashboard({ user, builds }) {
 }
 
 /**
- * The home route: a guest sees the marketing hero (unchanged from before
- * auth existed - gameplay has never required an account); a logged-in
- * user sees a real dashboard instead, built from their saved builds.
+ * The home route: a guest sees the marketing hero - gameplay has never
+ * required an account - flanked by real player photo columns on wide
+ * screens (see GuestHero/ShowcaseColumn); a logged-in user sees a real
+ * dashboard instead, built from their saved builds.
  */
 export default function HomePage() {
   const { user, loading: authLoading } = useAuth();

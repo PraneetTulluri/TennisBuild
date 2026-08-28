@@ -221,8 +221,94 @@ button {
   text-align: center;
 }
 
+.landing-hero-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  width: 100%;
+  max-width: 1360px;
+}
+
 .landing-hero {
   max-width: 560px;
+  flex: 1 1 480px;
+}
+
+/* The real-photo columns that flank the hero on wide screens, filling
+   what used to be empty gutter with the actual roster (legends and
+   current stars, real ESPN photos only - never the illustrated bust
+   fallback, see ShowcasePortrait) instead of decoration. Hidden below
+   the breakpoint where there's no real gutter left to use for them. */
+.landing-showcase {
+  display: none;
+}
+
+@media (min-width: 1100px) {
+  .landing-showcase {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    flex: 1 1 200px;
+    max-width: 230px;
+  }
+
+  .landing-showcase-left {
+    align-items: flex-end;
+  }
+
+  .landing-showcase-right {
+    align-items: flex-start;
+  }
+}
+
+.showcase-portrait {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 0.9;
+  animation: showcase-in 0.5s ease-out both;
+  animation-delay: calc(var(--i) * 0.08s);
+}
+
+.landing-showcase-left .showcase-portrait {
+  flex-direction: row-reverse;
+}
+
+.showcase-portrait img {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: top center;
+  border: 2px solid var(--tier-current);
+  flex-shrink: 0;
+  background: var(--ink-panel);
+}
+
+.showcase-portrait.tier-legend img {
+  border-color: var(--tier-legend);
+}
+
+.showcase-portrait.tier-journeyman img {
+  border-color: var(--tier-journeyman);
+}
+
+.showcase-portrait-name {
+  font-size: 0.72rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+@keyframes showcase-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 0.9;
+    transform: translateY(0);
+  }
 }
 
 .landing-kicker {
@@ -1156,6 +1242,25 @@ button {
   margin: 4px 0 0;
   font-size: 0.75rem;
   color: var(--muted);
+}
+
+.season-plan-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.quick-sim-button {
+  white-space: nowrap;
+}
+
+.quick-sim-hint {
+  margin: 10px 0 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-align: center;
 }
 
 .career-stage-actions {

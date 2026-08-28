@@ -3,6 +3,7 @@ import {
   pointsToRanking,
   createCareerState,
   simulateNextSeason,
+  simulateFullCareer,
   retireNow,
   summarizeCareer,
   SLAM_CALENDAR,
@@ -144,7 +145,7 @@ describe("simulateNextSeason", () => {
     const season = next.seasons[0];
     for (const key of Object.keys(STRONG_ATTRIBUTES)) {
       const full = state.currentAttributes[key];
-      const injured = Math.round(full * 0.85);
+      const injured = Math.round(full * 0.9);
       expect([full, injured]).toContain(season.attributes[key]);
     }
   });
@@ -478,5 +479,117 @@ describe("life events", () => {
     const next = simulateNextSeason(state, FAKE_POOL, DEFAULT_SLIDERS);
     expect(next.seasons[0].lifeEventPrompt).toBeNull();
     expect(next.seasons[0].lifeEventChoice).toBeNull();
+  });
+});
+
+describe("simulateFullCareer (quick sim)", () => {
+  it("runs a fresh career unattended to a retired state within a believable age range", () => {
+    const state = createCareerState(STRONG_ATTRIBUTES);
+    const finished = simulateFullCareer(state, MIXED_STRENGTH_POOL);
+    expect(finished.retired).toBe(true);
+    expect(finished.seasons.length).toBeGreaterThan(0);
+    const summary = summarizeCareer(finished);
+    expect(summary.retirementAge).toBeGreaterThanOrEqual(19);
+    expect(summary.retirementAge).toBeLessThanOrEqual(44);
+  });
+
+  it("is safe to call from a career already partway through by hand", () => {
+    let state = createCareerState(STRONG_ATTRIBUTES);
+    for (let i = 0; i < 3; i++) {
+      state = simulateNextSeason(state, MIXED_STRENGTH_POOL, DEFAULT_SLIDERS);
+    }
+    const finished = simulateFullCareer(state, MIXED_STRENGTH_POOL);
+    expect(finished.retired).toBe(true);
+    expect(finished.seasons.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("produces varied retirement ages/outcomes across repeated runs, not one fixed script", () => {
+    const ages = new Set();
+    const slamCounts = new Set();
+    for (let i = 0; i < 15; i++) {
+      const state = createCareerState(STRONG_ATTRIBUTES);
+      const finished = simulateFullCareer(state, MIXED_STRENGTH_POOL);
+      const summary = summarizeCareer(finished);
+      ages.add(summary.retirementAge);
+      slamCounts.add(summary.slamTitles);
+    }
+    // Not every trial needs a different value, but 15 independent careers
+    // landing on the exact same age or Slam count every time would mean
+    // the autopilot (or the underlying sim) isn't actually varying.
+    expect(ages.size).toBeGreaterThan(1);
+    expect(slamCounts.size).toBeGreaterThan(1);
+  });
+});
+
+describe("age-scaled injury risk", () => {
+  it("the same max-intensity sliders carry meaningfully less injury risk at 18 than at 35", () => {
+    const trials = 250;
+    let youngInjuries = 0;
+    let oldInjuries = 0;
+
+    for (let i = 0; i < trials; i++) {
+      const youngState = { ...createCareerState(STRONG_ATTRIBUTES), age: 18 };
+      const oldState = { ...createCareerState(STRONG_ATTRIBUTES), age: 35 };
+      const youngNext = simulateNextSeason(youngState, FAKE_POOL, MAX_SLIDERS);
+      const oldNext = simulateNextSeason(oldState, FAKE_POOL, MAX_SLIDERS);
+      if (youngNext.seasons[0].injury) youngInjuries++;
+      if (oldNext.seasons[0].injury) oldInjuries++;
+    }
+
+    expect(youngInjuries).toBeLessThan(oldInjuries);
+  });
+});
+
+describe("recovery risk after an injury", () => {
+  it("coming back at the same high intensity right after an injury is riskier than easing off first", () => {
+    const trials = 250;
+    const injuredLastSeason = {
+      age: 24,
+      ranking: 40,
+      injury: { description: "test injury", careerEnding: false },
+      trainingIntensity: 90,
+      scheduleIntensity: 90,
+    };
+    const baseState = {
+      ...createCareerState(STRONG_ATTRIBUTES),
+      age: 25,
+      seasons: [injuredLastSeason],
+    };
+
+    let recklessInjuries = 0;
+    let cautiousInjuries = 0;
+    const RECKLESS_SLIDERS = { trainingIntensity: 90, scheduleIntensity: 90 };
+    const CAUTIOUS_SLIDERS = { trainingIntensity: 30, scheduleIntensity: 30 };
+
+    for (let i = 0; i < trials; i++) {
+      const recklessNext = simulateNextSeason(baseState, FAKE_POOL, RECKLESS_SLIDERS);
+      const cautiousNext = simulateNextSeason(baseState, FAKE_POOL, CAUTIOUS_SLIDERS);
+      if (recklessNext.seasons[1].injury) recklessInjuries++;
+      if (cautiousNext.seasons[1].injury) cautiousInjuries++;
+    }
+
+    expect(cautiousInjuries).toBeLessThan(recklessInjuries);
+  });
+});
+
+describe("late-career viability with conservative management", () => {
+  it("a conservative, well-managed veteran does not collapse by their late 30s", () => {
+    // A long run of light training from a young age keeps decline onset
+    // pushed out (see declineOnsetAge) - simulate straight through to 37
+    // at low intensity and confirm attributes stay in a believable range
+    // rather than bottoming out.
+    let state = createCareerState(STRONG_ATTRIBUTES);
+    const LIGHT_SLIDERS = { trainingIntensity: 35, scheduleIntensity: 35 };
+    while (state.age < 37 && !state.retired) {
+      state = simulateNextSeason(state, MIXED_STRENGTH_POOL, LIGHT_SLIDERS);
+    }
+    if (state.retired) return; // rare career-ending injury - not what this test targets
+
+    const avgCurrent =
+      Object.values(state.currentAttributes).reduce((sum, v) => sum + v, 0) / 8;
+    const avgPotential =
+      Object.values(state.baseAttributes).reduce((sum, v) => sum + v, 0) / 8;
+    // Well-managed, not maxed-out development - but nowhere near collapsed.
+    expect(avgCurrent).toBeGreaterThan(avgPotential * 0.65);
   });
 });

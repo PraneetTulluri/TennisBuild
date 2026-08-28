@@ -109,12 +109,22 @@ export default function GuidePage() {
             </li>
           </ul>
           <p>
+            Injury risk is age-scaled, not just slider-scaled - the same intensity is a
+            real but modest bet at 19 and a much bigger one at 34, so going hard while
+            young and tapering off later is genuinely the safer path, not just flavor.
+            Coming back at the same intensity right after an injury carries its own
+            surcharge too - dialing both sliders down for a season after getting hurt is
+            what actually lowers the risk of it happening again.
+          </p>
+          <p>
             Decline eventually sets in, but not at a fixed age - training hard
-            consistently pulls it earlier, a more conservative career pushes it later. A
-            sparse, random pool of off-court life events (a breakup, a new baby, a viral
-            moment, a feud with a rival, and many more) can also show up a few times a
-            career, each a small choice with its own modest effect - just enough that no
-            two careers ever play out quite the same way.
+            consistently pulls it earlier, a more conservative career pushes it later, out
+            into the late 30s for a genuinely well-managed build. A late-career prime like
+            a handful of real greats have had is a reachable reward for good management,
+            not a rare fluke. A sparse, random pool of off-court life events (a breakup, a
+            new baby, a viral moment, a feud with a rival, and many more) can also show up
+            a few times a career, each a choice with its own real effect - just enough
+            that no two careers ever play out quite the same way.
           </p>
           <p>
             Retirement is a choice made every season - Continue to Next Season, or Retire
@@ -124,6 +134,14 @@ export default function GuidePage() {
             been pushed. Training and schedule can, and should, change season to season -
             push hard while young, then ease off once age starts working against the
             build.
+          </p>
+          <p>
+            Do not want to set sliders every single season?{" "}
+            <strong>Quick Sim Rest of Career</strong> auto-plays everything remaining with
+            a sensible age-aware strategy - hard while young, tapering down through
+            decline, easing off further right after an injury - and jumps straight to the
+            final result. It is available from age 18 on, so a whole career can be
+            quick-simmed in one click if the point is just seeing how a build turns out.
           </p>
         </GuideSection>
 

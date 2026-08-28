@@ -31,6 +31,7 @@ export {
   pointsToRanking,
   createCareerState,
   simulateNextSeason,
+  simulateFullCareer,
   retireNow,
   summarizeCareer,
   pickLifeEvent,

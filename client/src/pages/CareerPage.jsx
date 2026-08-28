@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   createCareerState,
   simulateNextSeason,
+  simulateFullCareer,
   retireNow,
   summarizeCareer,
   computeGoatRanking,
@@ -223,7 +224,7 @@ function Age30Reminder({ onDismiss }) {
 // events get entered (more title chances, more ranking points) for
 // fatigue. Both persist between seasons rather than resetting, so easing
 // off as the player ages is a deliberate choice, not busywork.
-function SlidersPanel({ sliders, onChange, onSimulate, age, canSimulate }) {
+function SlidersPanel({ sliders, onChange, onSimulate, onQuickSim, age, canSimulate }) {
   return (
     <div className="decision-card">
       <p className="result-kicker">Season Plan - Age {age}</p>
@@ -264,14 +265,28 @@ function SlidersPanel({ sliders, onChange, onSimulate, age, canSimulate }) {
           fatigue.
         </p>
       </div>
-      <button
-        type="button"
-        className="spin-button"
-        onClick={onSimulate}
-        disabled={!canSimulate}
-      >
-        Simulate Season
-      </button>
+      <div className="season-plan-actions">
+        <button
+          type="button"
+          className="spin-button"
+          onClick={onSimulate}
+          disabled={!canSimulate}
+        >
+          Simulate Season
+        </button>
+        <button
+          type="button"
+          className="secondary-button quick-sim-button"
+          onClick={onQuickSim}
+          disabled={!canSimulate}
+        >
+          Quick Sim Rest of Career
+        </button>
+      </div>
+      <p className="quick-sim-hint">
+        Auto-plays every remaining season with a sensible age-aware strategy and jumps
+        straight to the final result.
+      </p>
     </div>
   );
 }
@@ -280,11 +295,13 @@ function SlidersPanel({ sliders, onChange, onSimulate, age, canSimulate }) {
 // seeing it play out (the simulation itself is instant) - matches the
 // same "let the moment breathe" reasoning behind the draft wheel's spin
 // delay.
-function SimulatingIndicator({ age }) {
+function SimulatingIndicator({ age, isQuickSim }) {
   return (
     <div className="simulating-indicator">
       <span className="simulating-ball">🎾</span>
-      <p>Simulating age {age}…</p>
+      <p>
+        {isQuickSim ? "Simulating the rest of the career…" : `Simulating age ${age}…`}
+      </p>
     </div>
   );
 }
@@ -401,6 +418,7 @@ export default function CareerPage() {
   const [lastLifeEventId, setLastLifeEventId] = useState(null);
   const [chosenLifeEventOption, setChosenLifeEventOption] = useState(null);
   const [dismissedAge30Reminder, setDismissedAge30Reminder] = useState(false);
+  const [quickSimRunning, setQuickSimRunning] = useState(false);
 
   const summary = careerState ? summarizeCareer(careerState) : null;
   const goat =
@@ -448,6 +466,7 @@ export default function CareerPage() {
 
   function handleSimulate() {
     playClick();
+    setQuickSimRunning(false);
     const resolvedLifeEvent =
       pendingLifeEvent && chosenLifeEventOption
         ? resolveLifeEventChoice(pendingLifeEvent, chosenLifeEventOption)
@@ -463,6 +482,19 @@ export default function CareerPage() {
       setCareerState(next);
       if (pendingLifeEvent) setLastLifeEventId(pendingLifeEvent.id);
       setStage(next.retired ? "retired" : "result");
+    }, 900);
+  }
+
+  function handleQuickSim() {
+    playClick();
+    setQuickSimRunning(true);
+    setStage("simulating");
+    window.setTimeout(() => {
+      const finalState = simulateFullCareer(careerState, playerPool);
+      setCareerState(finalState);
+      setPendingLifeEvent(null);
+      setChosenLifeEventOption(null);
+      setStage("retired");
     }, 900);
   }
 
@@ -520,12 +552,15 @@ export default function CareerPage() {
               sliders={sliders}
               onChange={setSliders}
               onSimulate={handleSimulate}
+              onQuickSim={handleQuickSim}
               age={careerState.age}
               canSimulate={!pendingLifeEvent || !!chosenLifeEventOption}
             />
           </>
         )}
-        {stage === "simulating" && <SimulatingIndicator age={careerState.age} />}
+        {stage === "simulating" && (
+          <SimulatingIndicator age={careerState.age} isQuickSim={quickSimRunning} />
+        )}
         {(stage === "result" || stage === "retired") && latestSeason && (
           <>
             <SeasonCard season={latestSeason} />
