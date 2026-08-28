@@ -58,3 +58,11 @@ statistical lookups), per an explicit product decision to prioritize speed
 and defensible-by-reputation numbers over precise stat-sourcing for the
 MVP. If this dataset is expanded later, keep new entries calibrated against
 the scale above so the pool stays internally consistent.
+
+37 current-tour entries were later added from a user-supplied scouting
+sheet (a strengths/weaknesses table covering the ATP's top 75 active
+players by rough current form) rather than from memory alone - each
+entry's 8 attributes were still hand-drafted against this same scale, using
+the sheet's "main strengths" column to set the ~80-90 range attributes and
+its "rough weaknesses" column to set the below-65 ones, so the two sourcing
+approaches stay consistent with each other.
