@@ -16,82 +16,145 @@ import { computeSurfaceStrength } from "./scoring.js";
 // opposition, not named real players) purely so season win/loss totals
 // and title counts are accurate, without adding narrative clutter.
 //
-// Attributes scale over the career via an age curve (rise, peak, decline)
-// rather than staying fixed, so careers have a real shape.
-
-// ---------- Age curve ----------
-
-/**
- * Multiplier applied to the build's base attributes for a season played
- * at this age: rises through 18-21, plateaus at peak for 22-29, then
- * gradually declines. Values are a first-pass calibration for a
- * believable career shape, not a precisely modeled sports-science curve.
- */
-export function ageFactor(age) {
-  if (age <= 21) return 0.78 + ((age - 18) * 0.22) / 3;
-  if (age <= 29) return 1.0;
-  const yearsPastPeak = age - 29;
-  return Math.max(0.45, 1.0 - yearsPastPeak * 0.045);
-}
+// Season-to-season shape is player-driven, not a fixed age curve: each
+// season the player sets a training-intensity and schedule-intensity
+// slider (0-100), which trade attribute growth and title opportunities
+// against injury risk - see the "Sliders" and "Attribute drift" sections
+// below. Attributes start at exactly what the draft produced (no
+// automatic discount for being young) and drift up or down afterward
+// based on age, those slider choices, how the season actually went, and
+// injuries - so two careers from the same build can end up completely
+// different depending on how it's managed. Retirement is the player's
+// own call every season (see retireNow) rather than a dice roll, with a
+// Legacy Score - not just raw totals - deciding the final GOAT ranking:
+// retiring while still near your peak locks in a bonus, while grinding
+// through a bad decline season costs you. The only *forced* endings are
+// a hard age cap and a rare career-ending injury (more likely the harder
+// training/schedule has been pushed) - so it's possible to play deep into
+// your 40s like a handful of real greats, or flame out at 29.
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
-function scaleAttributes(attributes, factor) {
+// ---------- Attribute drift ----------
+//
+// How a season nudges the player's *actual* attributes going into the
+// next one - additive, not a multiplier, and applied uniformly across
+// all 8 attributes for simplicity. This is what replaces the old fixed
+// age-curve: a young player still trends upward by default, a player in
+// their 30s trends downward by default, but training intensity, how the
+// season actually went, and injuries all shift that up or down - a
+// well-managed veteran can keep growing well past a real player's
+// typical peak, and a recklessly pushed young player can start
+// declining early.
+
+/** The age-driven default trend, before training/outcome/injury adjust it. */
+function ageDriftBias(age) {
+  if (age <= 21) return 2.0;
+  if (age <= 24) return 1.0;
+  if (age <= 27) return 0;
+  if (age <= 30) return -0.5;
+  if (age <= 33) return -1.5;
+  if (age <= 36) return -2.5;
+  return -4.0;
+}
+
+/** Harder training pushes growth higher, but undertraining lets sharpness slip. */
+function trainingDriftBonus(trainingIntensity) {
+  return (trainingIntensity / 100) * 2.8 - 1.2;
+}
+
+/** A strong season builds confidence/form; a real decline off a prior peak erodes it. */
+function outcomeDriftBonus(ranking, priorPeakRanking) {
+  if (priorPeakRanking === null) return 0;
+  if (ranking <= 10) return 1.2;
+  if (ranking <= 30) return 0.5;
+  if (ranking > priorPeakRanking * 2.5 || ranking > 150) return -1.5;
+  if (ranking > priorPeakRanking * 1.5 || ranking > 80) return -0.5;
+  return 0;
+}
+
+function computeAttributeDrift({
+  age,
+  trainingIntensity,
+  ranking,
+  priorPeakRanking,
+  injured,
+}) {
+  const noise = (Math.random() - 0.5) * 2; // +/- 1, keeps outcomes from feeling too formulaic
+  const total =
+    ageDriftBias(age) +
+    trainingDriftBonus(trainingIntensity) +
+    outcomeDriftBonus(ranking, priorPeakRanking) +
+    (injured ? -4 : 0) +
+    noise;
+  return Math.round(total);
+}
+
+/** Applies a flat drift amount to every attribute, clamped to the roster's real range (1-110). */
+function applyDrift(attributes, drift) {
   const result = {};
   for (const key of ATTRIBUTE_KEYS) {
-    result[key] = clamp(Math.round(attributes[key] * factor), 1, 99);
+    result[key] = clamp(attributes[key] + drift, 1, 110);
   }
   return result;
 }
 
+/** A one-season dip from playing hurt - temporary, doesn't affect the attributes carried into next season. */
+function applyInjuryImpact(attributes, multiplier) {
+  const result = {};
+  for (const key of ATTRIBUTE_KEYS) {
+    result[key] = clamp(Math.round(attributes[key] * multiplier), 1, 110);
+  }
+  return result;
+}
+
+// ---------- Sliders ----------
+//
+// The two levers the player sets before each season - both 0-100.
+// Training intensity trades attribute growth against injury risk;
+// schedule intensity trades how many events get entered (more Slams
+// aren't affected, but Masters/tour depth is) against fatigue. Both are
+// meant to be re-set every season, not locked in once - the whole point
+// is being able to train lighter and play a lighter schedule once age
+// starts working against you.
+export const DEFAULT_SLIDERS = { trainingIntensity: 50, scheduleIntensity: 50 };
+
+function eventCountsForSchedule(scheduleIntensity) {
+  return {
+    masters: Math.round(3 + (scheduleIntensity / 100) * 6), // 3-9, real ATP calendar tops out at 9
+    tour: Math.round(4 + (scheduleIntensity / 100) * 8), // 4-12
+  };
+}
+
+function seasonInjuryChance({ attributes, trainingIntensity, scheduleIntensity, age }) {
+  const physicalIntensity = (attributes.power + attributes.movement) / 2;
+  const base = 0.03 + (physicalIntensity / 99) * 0.05;
+  const trainingRisk = Math.pow(trainingIntensity / 100, 1.5) * 0.12;
+  const scheduleRisk = Math.pow(scheduleIntensity / 100, 1.5) * 0.1;
+  const ageRisk = Math.max(0, (age - 30) * 0.008);
+  return clamp(base + trainingRisk + scheduleRisk + ageRisk, 0.02, 0.55);
+}
+
 /**
- * Whether a career ends after the season played at `age`. Age 42 is an
- * absolute safety cap (checked before `retirementChanceDelta` even
- * applies - nothing overrides it); from 30 onward, retirement chance
- * grows with age and accelerates once the age curve has meaningfully
- * dropped off peak. `retirementChanceDelta` is where the real spread
- * comes from in practice - simulateNextSeason folds in how this season
- * actually went (see performanceRetirementDelta/injuryTollDelta below)
- * on top of any career-decision effect, so a thriving late-career build
- * can play deep into its late 30s/40, while one that's fallen off a
- * cliff walks away in its early 30s - not everyone drifting toward the
- * same retirement age regardless of how the career went.
+ * The odds that *this season's* injury turns out to be career-ending -
+ * only rolled when an injury has already happened. Rises with how many
+ * injuries have already piled up and with how hard training/schedule
+ * have been pushed, which is what makes "flame out young" a real,
+ * chosen-into outcome rather than pure bad luck.
  */
-export function shouldRetire(age, retirementChanceDelta = 0) {
-  if (age >= 42) return true;
-  if (age < 30) return false;
-  const factor = ageFactor(age);
-  const baseChance = (age - 30) * 0.035;
-  const declineChance = factor < 0.85 ? (1 - factor) * 0.45 : 0;
-  const chance = Math.max(
-    0,
-    Math.min(0.95, baseChance + declineChance + retirementChanceDelta)
+function catastrophicInjuryChance({
+  injuryCountSoFar,
+  trainingIntensity,
+  scheduleIntensity,
+}) {
+  return Math.min(
+    0.28,
+    injuryCountSoFar * 0.03 +
+      (trainingIntensity / 100) * 0.06 +
+      (scheduleIntensity / 100) * 0.045
   );
-  return Math.random() < chance;
-}
-
-/**
- * How this season's ranking, relative to the career's best ranking so
- * far, nudges retirement odds - still-thriving players play on longer
- * (there's more legacy left to chase), while a player who's fallen far
- * off their peak loses motivation faster. `priorPeakRanking` is null for
- * a career's first season (no history yet to compare against).
- */
-function performanceRetirementDelta(ranking, priorPeakRanking) {
-  if (priorPeakRanking === null) return 0;
-  if (ranking <= 5) return -0.18;
-  if (ranking <= 20) return -0.1;
-  if (ranking <= 50) return -0.04;
-  if (ranking > 300 || ranking > priorPeakRanking * 4) return 0.16;
-  if (ranking > 150 || ranking > priorPeakRanking * 2.5) return 0.08;
-  return 0;
-}
-
-/** Accumulated wear and tear - a heavily injury-marred career trends toward an earlier exit. */
-function injuryTollDelta(injuryCountSoFar) {
-  return Math.min(0.1, injuryCountSoFar * 0.018);
 }
 
 // ---------- Shared match model ----------
@@ -239,14 +302,14 @@ function simulateSlam(attributes, slam, playerPool) {
 // not a rough formula), but against generated opposition throughout -
 // no real players, no per-event detail surfaced to the UI, since this
 // is meant to represent the bulk of a season, not individual stories.
+// How many of each get entered now comes from the schedule-intensity
+// slider (see eventCountsForSchedule) instead of a fixed count.
 
 const MASTERS_ROUNDS = ["R64", "R32", "R16", "QF", "SF", "F"];
 const MASTERS_BASELINE = { R64: 70, R32: 76, R16: 82, QF: 87, SF: 91, F: 94 };
-const MASTERS_EVENTS_PER_SEASON = 9; // matches the real ATP Masters 1000 calendar
 
 const TOUR_ROUNDS = ["R32", "R16", "QF", "SF", "F"];
 const TOUR_BASELINE = { R32: 62, R16: 70, QF: 76, SF: 82, F: 86 };
-const TOUR_EVENTS_PER_SEASON = 12; // a rough count of 250/500-level events a healthy full season includes
 
 // Rough, simplified surface mix for non-Slam events (real ATP tour skews
 // hard-court-heavy with clay and grass swings) - not an authentic
@@ -270,14 +333,14 @@ function simulateBracketEvent(attributes, rounds, baselineByRound) {
   return { wins, champion: true };
 }
 
-function simulateNonSlamSeason(attributes) {
+function simulateNonSlamSeason(attributes, eventCounts) {
   let masterTitles = 0;
   let tourTitles = 0;
   let wins = 0;
   let losses = 0;
   let points = 0;
 
-  for (let i = 0; i < MASTERS_EVENTS_PER_SEASON; i++) {
+  for (let i = 0; i < eventCounts.masters; i++) {
     const { wins: eventWins, champion } = simulateBracketEvent(
       attributes,
       MASTERS_ROUNDS,
@@ -289,7 +352,7 @@ function simulateNonSlamSeason(attributes) {
     else losses++;
   }
 
-  for (let i = 0; i < TOUR_EVENTS_PER_SEASON; i++) {
+  for (let i = 0; i < eventCounts.tour; i++) {
     const { wins: eventWins, champion } = simulateBracketEvent(
       attributes,
       TOUR_ROUNDS,
@@ -335,608 +398,73 @@ export function pointsToRanking(points) {
   return RANKING_BREAKPOINTS[RANKING_BREAKPOINTS.length - 1].rank;
 }
 
-// ---------- Injuries ----------
-
-/**
- * A small per-season chance of an injury, loosely more likely for
- * high-Power/high-Movement builds (a physically taxing playing style) -
- * a flavor mechanic, not a precise medical model. When it happens, this
- * season's effective attributes take a mild hit. `injuryChanceDelta`
- * (from a career decision - see CAREER_DECISIONS below) shifts the odds
- * up or down, clamped so a decision alone can never guarantee or rule out
- * an injury outright.
- */
-function maybeInjury(attributes, injuryChanceDelta = 0) {
-  const intensity = (attributes.power + attributes.movement) / 2;
-  const injuryChance = clamp(
-    0.04 + (intensity / 99) * 0.08 + injuryChanceDelta,
-    0.01,
-    0.6
-  );
-  if (Math.random() < injuryChance) {
-    return {
-      description: "A mid-season injury forced time away from the tour.",
-      impactMultiplier: 0.85,
-    };
-  }
-  return null;
-}
-
-// ---------- Career decisions ----------
+// ---------- Legacy score ----------
 //
-// A small, varied pool of offseason/preseason decisions offered before
-// each simulated season - each a binary choice with a real, numeric
-// tradeoff (a small attribute nudge for that season, and/or a shift in
-// this season's injury odds or the next age check's retirement odds),
-// not just flavor text. Only one is offered per season (see
-// pickCareerDecision), so a career of several seasons naturally sees a
-// different mix each time without needing an exhaustive catalog. Several
-// options are deliberately framed as "specialize further" vs. "stay
-// balanced" - a nod to the same specialist-vs-generalist tradeoff the
-// archetype scoring model (see scoring.js/archetypes.js) already builds
-// the whole game around.
-export const CAREER_DECISIONS = [
-  {
-    id: "preseasonTraining",
-    prompt: "Preseason: how do you want to prepare?",
-    options: [
-      {
-        id: "grind",
-        label: "Grind through a punishing fitness block",
-        description: "+3 Power, +2 Movement this season - but a real injury risk.",
-        attributeDelta: { power: 3, movement: 2 },
-        injuryChanceDelta: 0.05,
-      },
-      {
-        id: "measured",
-        label: "Build up gradually and stay healthy",
-        description: "+1 Power, +1 Movement - smaller gains, safer season.",
-        attributeDelta: { power: 1, movement: 1 },
-        injuryChanceDelta: -0.03,
-      },
-    ],
-  },
-  {
-    id: "technicalOverhaul",
-    prompt: "Offseason: what does the coaching team retool?",
-    options: [
-      {
-        id: "groundstrokes",
-        label: "Rebuild the forehand and backhand from scratch",
-        description: "+3 Forehand, +3 Backhand - but -1 Serve while it beds in.",
-        attributeDelta: { forehand: 3, backhand: 3, serve: -1 },
-      },
-      {
-        id: "serve",
-        label: "Leave the strokes alone, sharpen the serve",
-        description: "+3 Serve, no downside - but a smaller total upgrade.",
-        attributeDelta: { serve: 3 },
-      },
-    ],
-  },
-  {
-    id: "newCoach",
-    prompt: "A high-profile coach wants in. Do you make the change?",
-    options: [
-      {
-        id: "hire",
-        label: "Hire the demanding, high-intensity coach",
-        description: "+2 Power, +2 Mental Toughness - but a tougher, riskier program.",
-        attributeDelta: { power: 2, mentalToughness: 2 },
-        injuryChanceDelta: 0.03,
-      },
-      {
-        id: "stay",
-        label: "Stick with your longtime team",
-        description: "No stat change, but the stability lowers retirement risk.",
-        attributeDelta: {},
-        retirementChanceDelta: -0.02,
-      },
-    ],
-  },
-  {
-    id: "sportsPsychologist",
-    prompt: "Your team suggests bringing on a sports psychologist.",
-    options: [
-      {
-        id: "hire",
-        label: "Work with a sports psychologist",
-        description: "+4 Mental Toughness this season.",
-        attributeDelta: { mentalToughness: 4 },
-      },
-      {
-        id: "skip",
-        label: "Skip it, trust your instincts",
-        description: "-1 Mental Toughness - old habits, for better or worse.",
-        attributeDelta: { mentalToughness: -1 },
-      },
-    ],
-  },
-  {
-    id: "schedulePhilosophy",
-    prompt: "How aggressive should this season's schedule be?",
-    options: [
-      {
-        id: "packed",
-        label: "Play a packed schedule to stay sharp",
-        description: "+2 Movement from match toughness - but real fatigue risk.",
-        attributeDelta: { movement: 2 },
-        injuryChanceDelta: 0.06,
-      },
-      {
-        id: "light",
-        label: "Prioritize rest between events",
-        description: "-1 Movement, but noticeably lower injury risk.",
-        attributeDelta: { movement: -1 },
-        injuryChanceDelta: -0.05,
-      },
-    ],
-  },
-  {
-    id: "recoveryRegimen",
-    prompt: "Preseason: commit to an overhauled recovery regimen?",
-    options: [
-      {
-        id: "commit",
-        label: "Commit to a strict recovery regimen",
-        description: "+1 Power, +1 Movement, and meaningfully lower injury risk.",
-        attributeDelta: { power: 1, movement: 1 },
-        injuryChanceDelta: -0.04,
-      },
-      {
-        id: "asIs",
-        label: "Keep doing what's always worked",
-        description: "No change, no risk either way.",
-        attributeDelta: {},
-      },
-    ],
-  },
-  {
-    id: "altitudeCamp",
-    prompt: "An altitude training camp opens up this offseason. Go?",
-    options: [
-      {
-        id: "go",
-        label: "Train at altitude for a fitness edge",
-        description: "+3 Power, +3 Movement - but a demanding block, injury risk up.",
-        attributeDelta: { power: 3, movement: 3 },
-        injuryChanceDelta: 0.06,
-      },
-      {
-        id: "skip",
-        label: "Train at sea level, stay steady",
-        description: "+1 Power - modest, low-risk.",
-        attributeDelta: { power: 1 },
-      },
-    ],
-  },
-  {
-    id: "netGameClinic",
-    prompt: "Preseason: specialize further, or round out the game?",
-    options: [
-      {
-        id: "specialize",
-        label: "Spend the block on return and volley drills",
-        description: "+3 Return, +3 Volley - but -1 Serve from the reduced reps.",
-        attributeDelta: { return: 3, volley: 3, serve: -1 },
-      },
-      {
-        id: "balanced",
-        label: "Keep every part of the game sharp",
-        description: "+1 to every attribute - smaller, but nothing left behind.",
-        attributeDelta: {
-          forehand: 1,
-          backhand: 1,
-          serve: 1,
-          return: 1,
-          volley: 1,
-          movement: 1,
-          power: 1,
-          mentalToughness: 1,
-        },
-      },
-    ],
-  },
-  {
-    id: "exhibitionTour",
-    prompt: "A lucrative exhibition tour is on offer this offseason. Play it?",
-    options: [
-      {
-        id: "play",
-        label: "Play the exhibition tour",
-        description: "+2 Mental Toughness from big-match reps - but real fatigue risk.",
-        attributeDelta: { mentalToughness: 2 },
-        injuryChanceDelta: 0.04,
-      },
-      {
-        id: "skip",
-        label: "Skip it, rest instead",
-        description: "Lower injury risk this season, no stat change.",
-        attributeDelta: {},
-        injuryChanceDelta: -0.03,
-      },
-    ],
-  },
-  {
-    id: "relocateBase",
-    prompt: "A stronger training academy wants you to relocate your base. Go?",
-    options: [
-      {
-        id: "move",
-        label: "Relocate for better sparring partners",
-        description: "+2 Forehand, +2 Backhand from sharper daily practice.",
-        attributeDelta: { forehand: 2, backhand: 2 },
-      },
-      {
-        id: "stay",
-        label: "Stay close to home and your support system",
-        description: "No stat change, but the stability lowers retirement risk.",
-        attributeDelta: {},
-        retirementChanceDelta: -0.02,
-      },
-    ],
-  },
-  {
-    id: "mediaSpotlight",
-    prompt: "Sponsors want a bigger media push this season. Lean into it?",
-    options: [
-      {
-        id: "embrace",
-        label: "Embrace the spotlight",
-        description:
-          "+2 Mental Toughness from the confidence boost - but a busier, riskier calendar.",
-        attributeDelta: { mentalToughness: 2 },
-        injuryChanceDelta: 0.02,
-      },
-      {
-        id: "avoid",
-        label: "Stay low-profile, focus on tennis",
-        description: "+1 Power, +1 Movement from the extra training time.",
-        attributeDelta: { power: 1, movement: 1 },
-      },
-    ],
-  },
-  {
-    id: "addDoubles",
-    prompt: "Add doubles to the schedule to sharpen net instincts?",
-    options: [
-      {
-        id: "play",
-        label: "Add doubles to the calendar",
-        description:
-          "+3 Volley from the extra net time - but more matches, more injury risk.",
-        attributeDelta: { volley: 3 },
-        injuryChanceDelta: 0.03,
-      },
-      {
-        id: "skip",
-        label: "Singles only",
-        description: "No change, no added risk.",
-        attributeDelta: {},
-      },
-    ],
-  },
-  {
-    id: "injuryPreventionTech",
-    prompt: "A cutting-edge injury-prevention program is available. Invest in it?",
-    options: [
-      {
-        id: "invest",
-        label: "Invest in the program",
-        description: "Meaningfully lower injury risk this season.",
-        attributeDelta: {},
-        injuryChanceDelta: -0.06,
-      },
-      {
-        id: "skip",
-        label: "Stick with traditional methods",
-        description: "No change either way.",
-        attributeDelta: {},
-      },
-    ],
-  },
-  {
-    id: "mentalReset",
-    prompt: "The grind is wearing on you. Take a break to recharge?",
-    options: [
-      {
-        id: "break",
-        label: "Take a short break to recharge mentally",
-        description: "+3 Mental Toughness - but -1 Power, -1 Movement from the rust.",
-        attributeDelta: { mentalToughness: 3, power: -1, movement: -1 },
-      },
-      {
-        id: "grind",
-        label: "Push through, keep grinding",
-        description:
-          "+1 Power, +1 Movement - but the burnout risk nudges retirement odds up.",
-        attributeDelta: { power: 1, movement: 1 },
-        retirementChanceDelta: 0.02,
-      },
-    ],
-  },
-  {
-    id: "racquetSetup",
-    prompt: "Your equipment team pitches a new racquet setup for more pop. Switch?",
-    options: [
-      {
-        id: "switch",
-        label: "Switch to the new setup",
-        description:
-          "+3 Power, +1 Serve - but -1 Forehand, -1 Backhand while it beds in.",
-        attributeDelta: { power: 3, serve: 1, forehand: -1, backhand: -1 },
-      },
-      {
-        id: "keep",
-        label: "Stick with trusted gear",
-        description: "No change, no risk.",
-        attributeDelta: {},
-      },
-    ],
-  },
-  {
-    id: "strengthVsSpeed",
-    prompt: "Offseason conditioning: build strength, or build speed?",
-    options: [
-      {
-        id: "strength",
-        label: "Build serious strength",
-        description: "+3 Power - but -1 Movement, the added bulk costs some mobility.",
-        attributeDelta: { power: 3, movement: -1 },
-      },
-      {
-        id: "speed",
-        label: "Prioritize speed and agility",
-        description: "+3 Movement - but -1 Power.",
-        attributeDelta: { movement: 3, power: -1 },
-      },
-    ],
-  },
-  {
-    id: "returnDrilling",
-    prompt: "Preseason drilling: sharpen the return, or the serve?",
-    options: [
-      {
-        id: "return",
-        label: "Drill the return of serve relentlessly",
-        description: "+4 Return.",
-        attributeDelta: { return: 4 },
-      },
-      {
-        id: "serve",
-        label: "Spend the time on serve instead",
-        description: "+4 Serve.",
-        attributeDelta: { serve: 4 },
-      },
-    ],
-  },
-  {
-    id: "clayFootwork",
-    prompt: "A clay-court footwork block is available before the spring swing. Take it?",
-    options: [
-      {
-        id: "clay",
-        label: "Spend the block on clay, sharpen footwork",
-        description: "+2 Movement, +1 Mental Toughness from the grinding rallies.",
-        attributeDelta: { movement: 2, mentalToughness: 1 },
-      },
-      {
-        id: "hard",
-        label: "Stay on hard courts, the tour's most common surface",
-        description: "+1 Serve, +1 Power.",
-        attributeDelta: { serve: 1, power: 1 },
-      },
-    ],
-  },
-  {
-    id: "grassPrep",
-    prompt: "A short grass-court block before the summer swing. Worth it?",
-    options: [
-      {
-        id: "grass",
-        label: "Take the grass-court block",
-        description:
-          "+2 Volley, +2 Serve - but -1 Movement, grass rewards different footwork.",
-        attributeDelta: { volley: 2, serve: 2, movement: -1 },
-      },
-      {
-        id: "skip",
-        label: "Skip it, stay on hard courts",
-        description: "+1 Serve, modest but no downside.",
-        attributeDelta: { serve: 1 },
-      },
-    ],
-  },
-  {
-    id: "familyBalance",
-    prompt: "Family wants more time off the tour this year. How do you balance it?",
-    options: [
-      {
-        id: "family",
-        label: "Take extra time away for family",
-        description:
-          "+3 Mental Toughness, lower injury risk - but a touch more ready to wind down.",
-        attributeDelta: { mentalToughness: 3 },
-        injuryChanceDelta: -0.03,
-        retirementChanceDelta: 0.01,
-      },
-      {
-        id: "tour",
-        label: "Stay fully committed to the tour",
-        description: "+1 Power, +1 Movement - but a heavier schedule raises injury risk.",
-        attributeDelta: { power: 1, movement: 1 },
-        injuryChanceDelta: 0.02,
-      },
-    ],
-  },
-  {
-    id: "physioTeam",
-    prompt: "A dedicated physio and strength team wants to join full-time. Hire them?",
-    options: [
-      {
-        id: "hire",
-        label: "Hire the dedicated team",
-        description: "Meaningfully lower injury risk, no downside.",
-        attributeDelta: {},
-        injuryChanceDelta: -0.06,
-      },
-      {
-        id: "skip",
-        label: "Keep the current small team",
-        description: "No change either way.",
-        attributeDelta: {},
-      },
-    ],
-  },
-  {
-    id: "dataAnalytics",
-    prompt: "Adopt a data-heavy scouting and prep approach, or trust experience?",
-    options: [
-      {
-        id: "data",
-        label: "Go all-in on analytics",
-        description: "+2 Return, +2 Mental Toughness from better scouting.",
-        attributeDelta: { return: 2, mentalToughness: 2 },
-      },
-      {
-        id: "instinct",
-        label: "Trust instincts and experience over data",
-        description: "+1 Forehand, +1 Backhand.",
-        attributeDelta: { forehand: 1, backhand: 1 },
-      },
-    ],
-  },
-  {
-    id: "secondCoach",
-    prompt: "A second coach wants to join the box for more perspectives. Add them?",
-    options: [
-      {
-        id: "add",
-        label: "Expand the coaching team",
-        description:
-          "+1 to every attribute from the extra input - small, but nothing left behind.",
-        attributeDelta: {
-          forehand: 1,
-          backhand: 1,
-          serve: 1,
-          return: 1,
-          volley: 1,
-          movement: 1,
-          power: 1,
-          mentalToughness: 1,
-        },
-      },
-      {
-        id: "keepSmall",
-        label: "Keep the box small and focused",
-        description: "No stat change, but the stability lowers retirement risk.",
-        attributeDelta: {},
-        retirementChanceDelta: -0.02,
-      },
-    ],
-  },
-  {
-    id: "crossTraining",
-    prompt: "Cross-train with another sport for conditioning this offseason?",
-    options: [
-      {
-        id: "cross",
-        label: "Cross-train with another sport",
-        description:
-          "+2 Movement, +1 Power - but -1 Forehand, -1 Backhand from the reduced racquet time.",
-        attributeDelta: { movement: 2, power: 1, forehand: -1, backhand: -1 },
-      },
-      {
-        id: "focus",
-        label: "Stay 100% tennis-focused",
-        description: "+1 Forehand, +1 Backhand.",
-        attributeDelta: { forehand: 1, backhand: 1 },
-      },
-    ],
-  },
-  {
-    id: "lateCareerMotivation",
-    prompt: "The body's asking questions. How do you push through it?",
-    options: [
-      {
-        id: "chase",
-        label: "Chase one more deep run, push the body",
-        description: "+2 Power - but higher injury risk this season.",
-        attributeDelta: { power: 2 },
-        injuryChanceDelta: 0.05,
-      },
-      {
-        id: "manage",
-        label: "Manage the body, protect longevity",
-        description: "-1 Power, but noticeably lower injury risk.",
-        attributeDelta: { power: -1 },
-        injuryChanceDelta: -0.05,
-      },
-    ],
-  },
-];
+// What actually decides the final GOAT ranking (see goat.js) - not just
+// raw career totals. Accrues every season (mirroring the same per-title/
+// per-peak-ranking weights goat.js uses for the real-legend benchmarks,
+// so simulated careers and real ones are being measured on the same
+// scale), but a season that clearly craters relative to the career's
+// established peak costs Legacy - hanging on too long into a bad decline
+// tarnishes it. Retiring voluntarily while still near that peak (see
+// retireNow) locks in a bonus instead.
 
-/**
- * Randomly offers one decision from the pool, avoiding an immediate
- * repeat of the previous season's decision (by id) so back-to-back
- * seasons don't feel identical when the pool happens to land on the same
- * one twice in a row.
- */
-export function pickCareerDecision(excludePreviousId = null) {
-  const pool = excludePreviousId
-    ? CAREER_DECISIONS.filter((decision) => decision.id !== excludePreviousId)
-    : CAREER_DECISIONS;
-  return pool[Math.floor(Math.random() * pool.length)];
+function peakRankingBonus(ranking) {
+  if (ranking === 1) return 150;
+  if (ranking <= 3) return 80;
+  if (ranking <= 10) return 30;
+  if (ranking <= 20) return 10;
+  return 0;
 }
 
-/**
- * Bundles a chosen option with its parent decision's prompt text, in the
- * shape simulateNextSeason expects as its third argument - keeps that
- * shape defined in one place rather than every caller re-assembling it.
- */
-export function resolveDecisionChoice(decision, option) {
-  return { ...option, decisionPrompt: decision.prompt };
+function seasonLegacyGain(season) {
+  const titleWeight =
+    season.slamTitles * 100 +
+    season.masterTitles * 15 +
+    (season.slamTitles + season.masterTitles + season.tourTitles) * 2;
+  return titleWeight + peakRankingBonus(season.ranking) / 5 + 3;
 }
 
-/** Applies a decision's attribute nudges on top of a season's effective attributes. */
-function applyAttributeDelta(attributes, delta) {
-  if (!delta) return attributes;
-  const result = { ...attributes };
-  for (const key of ATTRIBUTE_KEYS) {
-    if (delta[key]) {
-      result[key] = clamp(Math.round(result[key] + delta[key]), 1, 99);
-    }
-  }
-  return result;
+/** A real decline off the career's established peak - not just a merely-okay season. */
+function declinePenalty(ranking, priorPeakRanking) {
+  if (priorPeakRanking === null) return 0;
+  if (ranking > priorPeakRanking * 3 || ranking > 200) return 40;
+  if (ranking > priorPeakRanking * 1.8 || ranking > 100) return 15;
+  return 0;
 }
 
 // ---------- Career state (mirrors draft.js's pure-state-machine pattern) ----------
 
-/** Starts a new career at age 18, no seasons played yet. */
+/** Starts a new career at age 18 with exactly the drafted attributes - no automatic "too young" discount. */
 export function createCareerState(baseAttributes) {
   return {
     baseAttributes,
+    currentAttributes: { ...baseAttributes },
     age: 18,
     retired: false,
+    retirementReason: null, // null | "voluntary" | "career-ending-injury" | "age-limit"
+    retiredOnTop: false,
+    legacyScore: 0,
     seasons: [],
   };
 }
 
+const HARD_AGE_CAP = 44;
+
 /**
- * Simulates one more season and appends it to the career. Applies this
- * season's age factor (and any injury) to the build's base attributes to
- * get that season's effective strength, plays out all 4 Grand Slams plus
- * the Masters/tour bracket sweep, combines everything into one accurate
- * season win/loss record and points total, derives a ranking, then rolls
- * whether next season happens at all.
+ * Simulates one more season and appends it to the career, using the
+ * player's *current* attributes (not a fixed age-curve recalculation of
+ * the original draft) as this season's baseline strength. `sliders`
+ * (training/schedule intensity, both 0-100) are set fresh for this call -
+ * the UI is expected to let the player adjust them before every season.
  *
- * `decisionOption` is optional - one of a CAREER_DECISIONS option objects
- * (see above), typically whichever one the player picked via
- * pickCareerDecision. When present, its attributeDelta/injuryChanceDelta/
- * retirementChanceDelta nudge this season (and the retirement roll after
- * it); when omitted the season plays out exactly as before.
+ * The career only ends here two ways: a hard age cap (44) or a rare
+ * career-ending injury, whose odds rise with accumulated injuries and
+ * how hard training/schedule have been pushed. Otherwise the season just
+ * plays out and `retired` stays false - ending the career the rest of
+ * the time is the player's own call (see retireNow).
  */
-export function simulateNextSeason(state, playerPool, decisionOption = null) {
+export function simulateNextSeason(state, playerPool, sliders = DEFAULT_SLIDERS) {
   if (state.retired) {
     throw new Error(
       "Cannot simulate a season: this career has already ended in retirement"
@@ -944,20 +472,30 @@ export function simulateNextSeason(state, playerPool, decisionOption = null) {
   }
 
   const age = state.age;
-  const factor = ageFactor(age);
-  let baseEffective = scaleAttributes(state.baseAttributes, factor);
-  if (decisionOption?.attributeDelta) {
-    baseEffective = applyAttributeDelta(baseEffective, decisionOption.attributeDelta);
-  }
-  const injury = maybeInjury(baseEffective, decisionOption?.injuryChanceDelta ?? 0);
-  const seasonAttributes = injury
-    ? scaleAttributes(baseEffective, injury.impactMultiplier)
-    : baseEffective;
+  const { trainingIntensity, scheduleIntensity } = sliders;
+
+  const injuryChance = seasonInjuryChance({
+    attributes: state.currentAttributes,
+    trainingIntensity,
+    scheduleIntensity,
+    age,
+  });
+  const injured = Math.random() < injuryChance;
+  const injury = injured
+    ? {
+        description: "A mid-season injury forced time away from the tour.",
+        careerEnding: false,
+      }
+    : null;
+  const seasonAttributes = injured
+    ? applyInjuryImpact(state.currentAttributes, 0.85)
+    : state.currentAttributes;
 
   const slams = SLAM_CALENDAR.map((slam) =>
     simulateSlam(seasonAttributes, slam, playerPool)
   );
-  const nonSlam = simulateNonSlamSeason(seasonAttributes);
+  const eventCounts = eventCountsForSchedule(scheduleIntensity);
+  const nonSlam = simulateNonSlamSeason(seasonAttributes, eventCounts);
 
   const slamWins = slams.reduce((sum, slam) => sum + slam.wins, 0);
   const slamLosses = slams.reduce((sum, slam) => sum + (slam.result === "W" ? 0 : 1), 0);
@@ -970,17 +508,15 @@ export function simulateNextSeason(state, playerPool, decisionOption = null) {
   const seasonPoints = slamPoints + nonSlam.points;
   const ranking = pointsToRanking(seasonPoints);
 
+  const priorPeakRanking =
+    state.seasons.length > 0 ? Math.min(...state.seasons.map((s) => s.ranking)) : null;
+
   const season = {
     year: state.seasons.length + 1,
     age,
-    ageFactor: factor,
-    // This season's actual effective attributes (age-scaled, plus any
-    // decision nudge and injury hit) - what the UI shows as "how the
-    // player's stats changed over time," not just the fixed build the
-    // draft produced.
     attributes: seasonAttributes,
-    decisionPrompt: decisionOption ? decisionOption.decisionPrompt : null,
-    decisionChoice: decisionOption ? decisionOption.label : null,
+    trainingIntensity,
+    scheduleIntensity,
     injury,
     slams,
     slamTitles,
@@ -991,26 +527,85 @@ export function simulateNextSeason(state, playerPool, decisionOption = null) {
     ranking,
   };
 
-  const nextAge = age + 1;
+  let legacyGain = seasonLegacyGain(season) - declinePenalty(ranking, priorPeakRanking);
 
-  // Retirement odds beyond the base age curve: the decision's own effect
-  // (if any), plus how this season's result actually went (see
-  // performanceRetirementDelta/injuryTollDelta) - this is what keeps
-  // retirement age from converging on the same number every career.
-  const priorPeakRanking =
-    state.seasons.length > 0 ? Math.min(...state.seasons.map((s) => s.ranking)) : null;
-  const injuryCountSoFar =
-    state.seasons.filter((s) => s.injury).length + (injury ? 1 : 0);
-  const retirementChanceDelta =
-    (decisionOption?.retirementChanceDelta ?? 0) +
-    performanceRetirementDelta(ranking, priorPeakRanking) +
-    injuryTollDelta(injuryCountSoFar);
+  const nextAge = age + 1;
+  let forcedRetired = false;
+  let retirementReason = null;
+
+  if (injured) {
+    const injuryCountSoFar = state.seasons.filter((s) => s.injury).length;
+    const catastrophicChance = catastrophicInjuryChance({
+      injuryCountSoFar,
+      trainingIntensity,
+      scheduleIntensity,
+    });
+    if (Math.random() < catastrophicChance) {
+      forcedRetired = true;
+      retirementReason = "career-ending-injury";
+      season.injury.careerEnding = true;
+      // A real cost, not just a neutral early stop - unfulfilled
+      // potential is part of what makes recklessness a genuine risk
+      // rather than a strictly-dominant "grow fast, worst case is just
+      // stopping early" strategy.
+      legacyGain -= 80;
+    }
+  }
+
+  if (!forcedRetired && nextAge >= HARD_AGE_CAP) {
+    forcedRetired = true;
+    retirementReason = "age-limit";
+  }
+
+  const nextLegacyScore = state.legacyScore + legacyGain;
+
+  const drift = computeAttributeDrift({
+    age,
+    trainingIntensity,
+    ranking,
+    priorPeakRanking,
+    injured,
+  });
+  const nextCurrentAttributes = applyDrift(state.currentAttributes, drift);
 
   return {
     ...state,
     age: nextAge,
-    retired: shouldRetire(nextAge, retirementChanceDelta),
+    currentAttributes: nextCurrentAttributes,
+    retired: forcedRetired,
+    retirementReason: forcedRetired ? retirementReason : state.retirementReason,
+    legacyScore: nextLegacyScore,
     seasons: [...state.seasons, season],
+  };
+}
+
+/**
+ * Ends the career on the player's own terms. Retiring while this
+ * season's ranking is still close to the career's best-ever ranking so
+ * far counts as "retiring on top" - a Legacy Score bonus that a forced
+ * ending (age cap, injury) never gets, rewarding the judgment call of
+ * walking away before a real decline sets in rather than chasing one
+ * season too many.
+ */
+export function retireNow(state) {
+  if (state.retired) {
+    throw new Error("This career has already ended in retirement");
+  }
+  if (state.seasons.length === 0) {
+    throw new Error("Cannot retire before playing at least one season");
+  }
+
+  const lastSeason = state.seasons[state.seasons.length - 1];
+  const peakRanking = Math.min(...state.seasons.map((s) => s.ranking));
+  const retiredOnTop = lastSeason.ranking <= Math.max(10, peakRanking * 1.5);
+  const bonus = retiredOnTop ? 60 : 0;
+
+  return {
+    ...state,
+    retired: true,
+    retirementReason: "voluntary",
+    retiredOnTop,
+    legacyScore: state.legacyScore + bonus,
   };
 }
 
@@ -1053,5 +648,8 @@ export function summarizeCareer(state) {
     peakRanking,
     retired: state.retired,
     retirementAge: state.retired && lastSeason ? lastSeason.age : null,
+    retirementReason: state.retirementReason,
+    retiredOnTop: state.retiredOnTop,
+    legacyScore: Math.max(0, Math.round(state.legacyScore)),
   };
 }

@@ -59,6 +59,8 @@ const buildSchema = new mongoose.Schema(
       goatRank: Number,
       goatTotal: Number,
       goatIsAllTimeGreat: Boolean,
+      legacyScore: Number,
+      retirementReason: String,
     },
   },
   { timestamps: true }

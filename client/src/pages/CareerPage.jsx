@@ -3,25 +3,16 @@ import { Link, useLocation } from "react-router-dom";
 import {
   createCareerState,
   simulateNextSeason,
+  retireNow,
   summarizeCareer,
   computeGoatRanking,
-  pickCareerDecision,
-  resolveDecisionChoice,
+  DEFAULT_SLIDERS,
   SLAM_CALENDAR,
   ATTRIBUTE_KEYS,
   ATTRIBUTE_LABELS,
 } from "@tennisbuild/game-engine";
 import { saveCareerToBuild } from "../api/builds.js";
 import { playClick } from "../utils/sound.js";
-
-// Not every offseason needs to be a fork in the road - a decision is only
-// offered some of the time, so the ones that do show up feel like real
-// moments rather than a mandatory click every single season.
-const DECISION_CHANCE = 0.6;
-
-function rollPendingDecision(excludePreviousId = null) {
-  return Math.random() < DECISION_CHANCE ? pickCareerDecision(excludePreviousId) : null;
-}
 
 const SLAM_SHORT_LABEL = {
   australianOpen: "Australian Open",
@@ -48,6 +39,18 @@ const SLAM_TROPHY_SURFACE_CLASS = {
   frenchOpen: "trophy-clay",
   wimbledon: "trophy-grass",
   usOpen: "trophy-hard",
+};
+
+// Why the career ended, in plain language - the whole point of a Legacy
+// Score is that *how* a career ended matters, not just the final totals.
+const RETIREMENT_NARRATIVE = {
+  voluntary: (retiredOnTop) =>
+    retiredOnTop
+      ? "Retired on your own terms, still right around your career peak - a smart exit that protects the legacy."
+      : "Called it a career after a rough stretch - the Legacy Score already took the hit for hanging on this long.",
+  "career-ending-injury": () =>
+    "A career-ending injury cut this career short - a real risk of pushing training and the schedule hard.",
+  "age-limit": () => "Played it out to the very end of a long, full career.",
 };
 
 // A persistent, always-visible trophy case for the 4 majors - stays put
@@ -94,9 +97,9 @@ function SeasonCard({ season }) {
         <span>Age {season.age}</span>
         <span>Rank #{season.ranking}</span>
       </div>
-      {season.decisionChoice && (
-        <p className="season-decision-line">📋 {season.decisionChoice}</p>
-      )}
+      <p className="season-sliders-line">
+        🏋️ Training {season.trainingIntensity} · 🗓️ Schedule {season.scheduleIntensity}
+      </p>
       <div className="slam-grid">
         {season.slams.map((slam) => (
           <SlamBadge key={slam.key} slam={slam} />
@@ -107,39 +110,75 @@ function SeasonCard({ season }) {
         {season.tourTitles === 1 ? "" : "s"} · Record: {season.record.wins}-
         {season.record.losses}
       </p>
-      {season.injury && <p className="season-injury">🩹 {season.injury.description}</p>}
+      {season.injury && (
+        <p className="season-injury">
+          🩹{" "}
+          {season.injury.careerEnding
+            ? "A career-ending injury cut the season short."
+            : season.injury.description}
+        </p>
+      )}
     </div>
   );
 }
 
-// A career decision offered before each season - see CAREER_DECISIONS in
-// career.js for the pool and each option's real numeric tradeoffs. Picking
-// one is what triggers that season's simulation (see handleChooseOption).
-function DecisionPrompt({ decision, onChoose }) {
+// The two levers set before every season - training intensity trades
+// attribute growth for injury risk, schedule intensity trades how many
+// events get entered (more title chances, more ranking points) for
+// fatigue. Both persist between seasons rather than resetting, so easing
+// off as the player ages is a deliberate choice, not busywork.
+function SlidersPanel({ sliders, onChange, onSimulate, age }) {
   return (
     <div className="decision-card">
-      <p className="result-kicker">Career Decision</p>
-      <h2 className="decision-prompt">{decision.prompt}</h2>
-      <div className="decision-options">
-        {decision.options.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            className="decision-option"
-            onClick={() => onChoose(option)}
-          >
-            <strong>{option.label}</strong>
-            <span>{option.description}</span>
-          </button>
-        ))}
+      <p className="result-kicker">Season Plan - Age {age}</p>
+      <div className="slider-row">
+        <div className="slider-label-row">
+          <span>Training Intensity</span>
+          <span className="slider-value">{sliders.trainingIntensity}</span>
+        </div>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={sliders.trainingIntensity}
+          onChange={(event) =>
+            onChange({ ...sliders, trainingIntensity: Number(event.target.value) })
+          }
+        />
+        <p className="slider-hint">
+          Higher pushes attribute growth further this season - but raises injury risk.
+        </p>
       </div>
+      <div className="slider-row">
+        <div className="slider-label-row">
+          <span>Schedule Intensity</span>
+          <span className="slider-value">{sliders.scheduleIntensity}</span>
+        </div>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={sliders.scheduleIntensity}
+          onChange={(event) =>
+            onChange({ ...sliders, scheduleIntensity: Number(event.target.value) })
+          }
+        />
+        <p className="slider-hint">
+          Higher enters more events - more chances at titles and ranking points, more
+          fatigue.
+        </p>
+      </div>
+      <button type="button" className="spin-button" onClick={onSimulate}>
+        Simulate Season
+      </button>
     </div>
   );
 }
 
-// A brief, purely-for-feel pause between picking a decision and seeing its
-// season play out (the simulation itself is instant) - matches the same
-// "let the moment breathe" reasoning behind the draft wheel's spin delay.
+// A brief, purely-for-feel pause between setting the season plan and
+// seeing it play out (the simulation itself is instant) - matches the
+// same "let the moment breathe" reasoning behind the draft wheel's spin
+// delay.
 function SimulatingIndicator({ age }) {
   return (
     <div className="simulating-indicator">
@@ -149,23 +188,8 @@ function SimulatingIndicator({ age }) {
   );
 }
 
-// The season this one didn't roll a decision (see DECISION_CHANCE) - a
-// quieter beat between the ones that do, still requiring a click to move
-// on rather than auto-advancing.
-function NoDecisionPrompt({ age, onContinue }) {
-  return (
-    <div className="decision-card no-decision-card">
-      <p className="result-kicker">Offseason</p>
-      <h2 className="decision-prompt">A quiet offseason - nothing notable to report.</h2>
-      <button type="button" className="spin-button" onClick={onContinue}>
-        Play Season (Age {age})
-      </button>
-    </div>
-  );
-}
-
 // A live view of the build's actual attributes as the career has aged
-// them - the age curve, injuries, and career decisions all show up here,
+// them - training, schedule, injuries, and age itself all show up here,
 // not just in the season-by-season results above. `previous` is the
 // season before this one (or, for the very first season played, the
 // original draft attributes), which is what produces the up/down deltas.
@@ -204,12 +228,15 @@ function AttributePanel({ current, previous }) {
  * (see career.js) - this component just holds that state in React and
  * renders it, same pattern as useDraftState for the draft itself.
  *
- * Unlike a growing list of past-season boxes, the career unfolds inside a
- * single `.career-stage` panel that swaps between three views - a
- * decision prompt, a brief "simulating" beat, then that season's result -
- * with each swap re-triggering a small entrance animation (see the
- * `key` on .career-stage). The trophy case above it is the one thing that
- * stays constant across all of that, ticking up as majors are won.
+ * Each season the player sets two sliders (training/schedule intensity)
+ * before simulating, then either continues (back to the slider panel for
+ * the next season) or retires voluntarily via retireNow - the only
+ * *forced* endings are a hard age cap and a rare career-ending injury.
+ * The whole thing unfolds inside a single `.career-stage` panel that
+ * swaps between three views - the slider panel, a brief "simulating"
+ * beat, then that season's result - instead of an ever-growing list of
+ * past seasons. The trophy case above it is the one thing that stays
+ * constant across all of that, ticking up as majors are won.
  */
 export default function CareerPage() {
   const location = useLocation();
@@ -218,13 +245,13 @@ export default function CareerPage() {
   const [careerState, setCareerState] = useState(() =>
     attributes ? createCareerState(attributes) : null
   );
-  const [stage, setStage] = useState("decision"); // decision | simulating | result | retired
-  const [pendingDecision, setPendingDecision] = useState(() => rollPendingDecision());
-  const [lastDecisionId, setLastDecisionId] = useState(null);
+  const [stage, setStage] = useState("sliders"); // sliders | simulating | result | retired
+  const [sliders, setSliders] = useState(DEFAULT_SLIDERS);
   const [careerSaveStatus, setCareerSaveStatus] = useState("idle"); // idle | saving | saved | error
 
   const summary = careerState ? summarizeCareer(careerState) : null;
-  const goat = careerState?.retired && summary ? computeGoatRanking(summary) : null;
+  const goat =
+    careerState?.retired && summary ? computeGoatRanking(summary.legacyScore) : null;
 
   // Once the career ends, automatically attach its result to the saved
   // build (if this career was launched from one - see ResultPage's Save
@@ -245,6 +272,8 @@ export default function CareerPage() {
       goatRank: goat.rank,
       goatTotal: goat.total,
       goatIsAllTimeGreat: goat.isAllTimeGreat,
+      legacyScore: summary.legacyScore,
+      retirementReason: summary.retirementReason,
     })
       .then(() => setCareerSaveStatus("saved"))
       .catch(() => setCareerSaveStatus("error"));
@@ -264,33 +293,32 @@ export default function CareerPage() {
     );
   }
 
-  // `option` is omitted when this season didn't roll a decision at all
-  // (see NoDecisionPrompt) - simulateNextSeason's third argument is
-  // already designed to be optional for exactly that case.
-  function handlePlaySeason(option) {
-    const resolved =
-      pendingDecision && option ? resolveDecisionChoice(pendingDecision, option) : null;
+  function handleSimulate() {
     playClick();
     setStage("simulating");
     window.setTimeout(() => {
-      const next = simulateNextSeason(careerState, playerPool, resolved);
+      const next = simulateNextSeason(careerState, playerPool, sliders);
       setCareerState(next);
-      if (resolved) setLastDecisionId(pendingDecision.id);
       setStage(next.retired ? "retired" : "result");
     }, 900);
   }
 
   function handleContinue() {
     playClick();
-    setPendingDecision(rollPendingDecision(lastDecisionId));
-    setStage("decision");
+    setStage("sliders");
+  }
+
+  function handleRetire() {
+    playClick();
+    setCareerState((prev) => retireNow(prev));
+    setStage("retired");
   }
 
   const latestSeason = careerState.seasons[careerState.seasons.length - 1] ?? null;
   const priorSeason = careerState.seasons[careerState.seasons.length - 2] ?? null;
   const currentAttributes = latestSeason
     ? latestSeason.attributes
-    : careerState.baseAttributes;
+    : careerState.currentAttributes;
   const previousAttributes = latestSeason
     ? priorSeason
       ? priorSeason.attributes
@@ -307,20 +335,27 @@ export default function CareerPage() {
       <TrophyCase slamTitlesByKey={summary.slamTitlesByKey} />
 
       <div className="career-stage" key={`${stage}-${careerState.seasons.length}`}>
-        {stage === "decision" && pendingDecision && (
-          <DecisionPrompt decision={pendingDecision} onChoose={handlePlaySeason} />
-        )}
-        {stage === "decision" && !pendingDecision && (
-          <NoDecisionPrompt age={careerState.age} onContinue={() => handlePlaySeason()} />
+        {stage === "sliders" && (
+          <SlidersPanel
+            sliders={sliders}
+            onChange={setSliders}
+            onSimulate={handleSimulate}
+            age={careerState.age}
+          />
         )}
         {stage === "simulating" && <SimulatingIndicator age={careerState.age} />}
         {(stage === "result" || stage === "retired") && latestSeason && (
           <>
             <SeasonCard season={latestSeason} />
             {stage === "result" && (
-              <button type="button" className="spin-button" onClick={handleContinue}>
-                Continue to Next Season
-              </button>
+              <div className="career-stage-actions">
+                <button type="button" className="spin-button" onClick={handleContinue}>
+                  Continue to Next Season
+                </button>
+                <button type="button" className="secondary-button" onClick={handleRetire}>
+                  Retire Now
+                </button>
+              </div>
             )}
           </>
         )}
@@ -330,6 +365,10 @@ export default function CareerPage() {
 
       {stage === "retired" && goat && (
         <div className="career-summary">
+          <p className="retirement-narrative">
+            {RETIREMENT_NARRATIVE[summary.retirementReason]?.(summary.retiredOnTop) ?? ""}
+          </p>
+
           <div className="goat-block">
             <p className="result-kicker">All-Time Ranking</p>
             {goat.isAllTimeGreat ? (
@@ -389,6 +428,10 @@ export default function CareerPage() {
             <div>
               <strong>{summary.retirementAge}</strong>
               <span>Retirement Age</span>
+            </div>
+            <div>
+              <strong>{summary.legacyScore}</strong>
+              <span>Legacy Score</span>
             </div>
           </div>
 

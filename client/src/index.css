@@ -1123,39 +1123,50 @@ button {
   text-align: center;
 }
 
-.decision-prompt {
-  margin: 4px 0 18px;
-}
-
-.decision-options {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-}
-
-.decision-option {
-  background: var(--ink);
-  border: 1px solid var(--ink-panel-light);
-  border-radius: 12px;
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.slider-row {
   text-align: left;
-  color: inherit;
-  font-family: inherit;
-  cursor: pointer;
+  margin: 18px 0;
 }
 
-.decision-option:hover {
-  border-color: var(--ball);
+.slider-label-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
 }
 
-.decision-option strong {
-  font-size: 0.95rem;
+.slider-value {
+  font-family: var(--font-display);
+  color: var(--ball);
 }
 
-.decision-option span {
+.slider-row input[type="range"] {
+  width: 100%;
+  accent-color: var(--ball);
+}
+
+.slider-hint {
+  margin: 4px 0 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.career-stage-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.retirement-narrative {
+  text-align: center;
+  color: var(--muted);
+  font-style: italic;
+  margin: 0 0 16px;
+}
+
+.season-sliders-line {
+  margin: 0 0 10px;
   font-size: 0.8rem;
   color: var(--muted);
 }
@@ -1173,22 +1184,6 @@ button {
   font-size: 2.4rem;
   display: inline-block;
   animation: ball-spin 0.9s linear infinite;
-}
-
-.season-decision-line {
-  margin: 0 0 10px;
-  font-size: 0.8rem;
-  color: var(--muted);
-  font-style: italic;
-}
-
-.no-decision-card {
-  opacity: 0.9;
-}
-
-.no-decision-card .decision-prompt {
-  color: var(--muted);
-  font-size: 1.2rem;
 }
 
 /* ---------- Career attributes ---------- */

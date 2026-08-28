@@ -250,9 +250,17 @@ export function computeGoatScore(entry) {
 }
 
 /**
- * Ranks a finished career (from summarizeCareer()) against the benchmark
- * legends, all scored the same way. Returns where it lands, plus who's
- * immediately above/below for a concrete "just ahead of X" comparison.
+ * Ranks a finished career against the benchmark legends, all scored the
+ * same way. Takes a `legacyScore` directly (see career.js's
+ * summarizeCareer/seasonLegacyGain) rather than recomputing a score from
+ * raw totals - a simulated career's Legacy Score already accounts for
+ * things a simple aggregate can't (a rough decline late in the career, or
+ * a bonus for retiring on top), which real-legend benchmarks are scored
+ * without (their numbers are static historical totals, not a simulated
+ * season-by-season run), but the two use the same underlying per-title/
+ * per-peak-ranking weights so they stay on a comparable scale. Returns
+ * where it lands, plus who's immediately above/below for a concrete
+ * "just ahead of X" comparison.
  *
  * `total` is always the size of the benchmark list (not benchmarks+1) -
  * "#N of 25" reads as "among the 25 greatest of all time", not as a
@@ -261,8 +269,8 @@ export function computeGoatScore(entry) {
  * `below` should be ignored - there's no honest numeric rank to give a
  * career that every single benchmark beat.
  */
-export function computeGoatRanking(summary) {
-  const you = { name: "You", isYou: true, score: computeGoatScore(summary) };
+export function computeGoatRanking(legacyScore) {
+  const you = { name: "You", isYou: true, score: legacyScore };
   const all = [
     ...GOAT_BENCHMARKS.map((b) => ({
       name: b.name,

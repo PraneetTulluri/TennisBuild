@@ -26,14 +26,11 @@ export {
 export {
   SLAM_CALENDAR,
   SLAM_RESULT_POINTS,
-  CAREER_DECISIONS,
-  ageFactor,
-  shouldRetire,
+  DEFAULT_SLIDERS,
   pointsToRanking,
   createCareerState,
   simulateNextSeason,
+  retireNow,
   summarizeCareer,
-  pickCareerDecision,
-  resolveDecisionChoice,
 } from "./career.js";
 export { GOAT_BENCHMARKS, computeGoatScore, computeGoatRanking } from "./goat.js";
