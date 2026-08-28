@@ -289,32 +289,72 @@ function SimulatingIndicator({ age }) {
   );
 }
 
+// The bar's full-scale width - fixed at 110 (not each attribute's own
+// ceiling) so a signature 108 skill and an ordinary 78 skill read on the
+// same ruler, and so the unfilled space past a non-signature player's
+// ~99 ceiling visibly communicates "this skill was never going to be
+// elite," not just "not there yet."
+const ATTRIBUTE_BAR_SCALE = 110;
+
 // A live view of the build's actual attributes as the career has aged
 // them - training, schedule, injuries, and age itself all show up here,
 // not just in the season-by-season results above. `previous` is the
 // season before this one (or, for the very first season played, the
 // original draft attributes), which is what produces the up/down deltas.
-function AttributePanel({ current, previous }) {
+// `potential` is the drafted ceiling (career.js's baseAttributes) - shown
+// as a dimmer fill behind the bright "current" fill in the same bar, so
+// it reads as "how much of what this player could become has actually
+// shown up yet," not just a bare number. Once current development
+// catches the ceiling the bar reports MAX instead of a fraction - though
+// decline can still pull a maxed-out attribute back below that ceiling
+// later, at which point it goes back to showing the fraction.
+function AttributePanel({ current, previous, potential }) {
   return (
     <div className="career-attributes">
       <p className="result-kicker">Attributes This Season</p>
       <div className="career-attributes-grid">
         {ATTRIBUTE_KEYS.map((key) => {
           const value = current[key];
+          const ceiling = potential[key];
           const delta = previous ? value - previous[key] : 0;
+          const atMax = value >= ceiling;
+          const currentPct = Math.min(100, (value / ATTRIBUTE_BAR_SCALE) * 100);
+          const potentialPct = Math.min(100, (ceiling / ATTRIBUTE_BAR_SCALE) * 100);
           return (
             <div key={key} className="career-attribute-row">
-              <span className="career-attribute-label">{ATTRIBUTE_LABELS[key]}</span>
-              <span
-                className={`career-attribute-value${value > 99 ? " elite-value" : ""}`}
+              <div className="career-attribute-top">
+                <span className="career-attribute-label">{ATTRIBUTE_LABELS[key]}</span>
+                <div className="career-attribute-numbers">
+                  <span
+                    className={`career-attribute-value${value > 99 ? " elite-value" : ""}`}
+                  >
+                    {value}
+                    {atMax ? (
+                      <span className="career-attribute-max"> MAX</span>
+                    ) : (
+                      <span className="career-attribute-ceiling"> / {ceiling}</span>
+                    )}
+                  </span>
+                  <span
+                    className={`career-attribute-delta${delta > 0 ? " up" : delta < 0 ? " down" : ""}`}
+                  >
+                    {delta > 0 ? `+${delta}` : delta < 0 ? delta : "–"}
+                  </span>
+                </div>
+              </div>
+              <div
+                className="career-attribute-bar"
+                title={`Current ${value} of a ${ceiling} potential`}
               >
-                {value}
-              </span>
-              <span
-                className={`career-attribute-delta${delta > 0 ? " up" : delta < 0 ? " down" : ""}`}
-              >
-                {delta > 0 ? `+${delta}` : delta < 0 ? delta : "–"}
-              </span>
+                <div
+                  className="career-attribute-bar-potential"
+                  style={{ width: `${potentialPct}%` }}
+                />
+                <div
+                  className={`career-attribute-bar-current${atMax ? " at-max" : ""}`}
+                  style={{ width: `${currentPct}%` }}
+                />
+              </div>
             </div>
           );
         })}
@@ -507,7 +547,11 @@ export default function CareerPage() {
         )}
       </div>
 
-      <AttributePanel current={currentAttributes} previous={previousAttributes} />
+      <AttributePanel
+        current={currentAttributes}
+        previous={previousAttributes}
+        potential={careerState.baseAttributes}
+      />
 
       {stage === "retired" && goat && (
         <div className="career-summary">

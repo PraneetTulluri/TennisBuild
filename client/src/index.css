@@ -1298,30 +1298,61 @@ button {
 
 .career-attributes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 8px;
   margin-top: 12px;
 }
 
 .career-attribute-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
   background: var(--ink);
   border-radius: 8px;
   padding: 8px 12px;
   text-align: left;
 }
 
+.career-attribute-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .career-attribute-label {
   font-size: 0.8rem;
   color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.career-attribute-numbers {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .career-attribute-value {
   font-family: var(--font-display);
   font-size: 1.1rem;
+  white-space: nowrap;
+}
+
+.career-attribute-ceiling {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.career-attribute-max {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  color: var(--tier-legend);
 }
 
 .career-attribute-delta {
@@ -1337,6 +1368,39 @@ button {
 
 .career-attribute-delta.down {
   color: #ff8a8a;
+}
+
+/* Two-tone bar: a dim fill up to the drafted potential ceiling, with a
+   bright fill on top showing how far current development has actually
+   closed that gap - once current catches the ceiling it switches to the
+   gold "at-max" fill instead (see AttributePanel's atMax flag). */
+.career-attribute-bar {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--ink-panel-light);
+  overflow: hidden;
+}
+
+.career-attribute-bar-potential {
+  position: absolute;
+  inset: 0 auto 0 0;
+  height: 100%;
+  background: rgba(157, 179, 162, 0.3);
+  border-radius: 999px;
+}
+
+.career-attribute-bar-current {
+  position: absolute;
+  inset: 0 auto 0 0;
+  height: 100%;
+  background: var(--ball);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.career-attribute-bar-current.at-max {
+  background: var(--tier-legend);
 }
 
 /* ---------- Legacy Score ---------- */
