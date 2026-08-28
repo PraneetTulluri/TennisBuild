@@ -107,6 +107,66 @@ button {
   text-decoration: none;
 }
 
+/* Hamburger toggle - hidden by default, only shown (and the nav turned
+   into a dropdown) below the breakpoint where the full link list no
+   longer fits on one line. See the site-header media query further down
+   for the collapsed layout itself. */
+.site-header-menu-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  background: none;
+  border: none;
+}
+
+.site-header-menu-toggle span {
+  display: block;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--paper);
+}
+
+@media (max-width: 760px) {
+  .site-header-menu-toggle {
+    display: flex;
+  }
+
+  .site-header-nav {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    background: var(--ink-panel);
+    border-bottom: 1px solid var(--ink-panel-light);
+    padding: 8px 24px 16px;
+  }
+
+  .site-header-nav.open {
+    display: flex;
+  }
+
+  .site-header-nav a,
+  .site-header-nav .site-header-link-button,
+  .site-header-user {
+    width: 100%;
+    padding: 10px 0;
+    font-size: 1rem;
+  }
+
+  .site-header-cta {
+    display: inline-block;
+    margin-top: 4px;
+  }
+}
+
 /* ---------- Auth pages ---------- */
 .auth-page {
   max-width: 400px;
@@ -142,7 +202,8 @@ button {
   padding: 10px 12px;
   color: var(--paper);
   font-family: inherit;
-  font-size: 0.95rem;
+  /* >=16px so iOS Safari doesn't auto-zoom the page on focus. */
+  font-size: 1rem;
 }
 
 .auth-form input:focus {
@@ -199,6 +260,8 @@ button {
 
 .dashboard-actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 12px;
 }
 
@@ -431,6 +494,8 @@ button {
 
 .draft-actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
   gap: 12px;
 }
@@ -645,6 +710,7 @@ button {
 
 .snag-options {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 16px;
 }
@@ -855,8 +921,10 @@ button {
 
 .result-overall-block {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: baseline;
-  gap: 16px;
+  gap: 8px 16px;
 }
 
 .result-overall {
@@ -967,6 +1035,8 @@ button {
 
 .result-actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 12px;
   margin-top: 8px;
 }
@@ -992,7 +1062,8 @@ button {
   padding: 10px 12px;
   color: var(--paper);
   font-family: inherit;
-  font-size: 0.9rem;
+  /* >=16px so iOS Safari doesn't auto-zoom the page on focus. */
+  font-size: 1rem;
 }
 
 .save-name-input:focus {
@@ -1918,4 +1989,36 @@ button {
   .career-top-widgets {
     flex-direction: column;
   }
+
+  /* Large display type reads fine at desktop scale but eats most of a
+     phone's width otherwise - scaled down here rather than everywhere,
+     since the bigger sizes are still the better choice above this
+     breakpoint. */
+  .landing-hero h1 {
+    font-size: 2.3rem;
+  }
+
+  .result-overall {
+    font-size: 3.2rem;
+  }
+
+  .result-archetype {
+    font-size: 1.2rem;
+  }
+
+  .career-title {
+    font-size: 1.7rem;
+  }
+
+  .goat-rank {
+    font-size: 2rem;
+  }
+}
+
+/* A last-resort backstop, not a substitute for the fixes above - nothing
+   on the page should be relying on this to look right, but it keeps one
+   overlooked fixed-width element from forcing the whole page to
+   side-scroll on a phone. */
+body {
+  overflow-x: hidden;
 }
