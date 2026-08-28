@@ -75,6 +75,49 @@ function TrophyCase({ slamTitlesByKey }) {
   );
 }
 
+// A persistent, always-visible running total - not just a number shown
+// once at retirement. Keyed by its own rounded value so React remounts
+// it (and replays the pop animation) every time it actually changes,
+// same trick as the trophy counts above.
+function LegacyScoreBadge({ legacyScore }) {
+  return (
+    <div className="legacy-badge">
+      <span className="legacy-badge-label">Legacy Score</span>
+      <span className="legacy-badge-value" key={legacyScore}>
+        {legacyScore}
+      </span>
+    </div>
+  );
+}
+
+// What just moved the Legacy Score, and by how much - a ticker rather
+// than just a single before/after number, so a season that swung it up
+// or down is legible in the moment instead of only showing up in a final
+// total at retirement. Each line staggers in slightly after the last for
+// a bit of "adding it up" motion.
+function LegacyTicker({ breakdown, delta }) {
+  return (
+    <div className="legacy-ticker">
+      <p className="legacy-ticker-title">Legacy Score this season</p>
+      <ul className="legacy-ticker-list">
+        {breakdown.map((entry, i) => (
+          <li
+            key={entry.label}
+            className={`legacy-ticker-line${entry.amount > 0 ? " up" : " down"}`}
+            style={{ animationDelay: `${i * 0.08}s` }}
+          >
+            <span>{entry.label}</span>
+            <span>{entry.amount > 0 ? `+${entry.amount}` : entry.amount}</span>
+          </li>
+        ))}
+      </ul>
+      <p className={`legacy-ticker-total${delta >= 0 ? " up" : " down"}`}>
+        Net: {delta > 0 ? `+${delta}` : delta}
+      </p>
+    </div>
+  );
+}
+
 // No opponent is ever named here - a Slam result is shown as just the
 // round reached. Naming a specific real player as "beaten" every year
 // across a decade-plus simulated career would imply they're frozen in
@@ -332,7 +375,10 @@ export default function CareerPage() {
         {careerState.retired ? "Career Complete" : `Age ${careerState.age}`}
       </h1>
 
-      <TrophyCase slamTitlesByKey={summary.slamTitlesByKey} />
+      <div className="career-top-widgets">
+        <TrophyCase slamTitlesByKey={summary.slamTitlesByKey} />
+        <LegacyScoreBadge legacyScore={summary.legacyScore} />
+      </div>
 
       <div className="career-stage" key={`${stage}-${careerState.seasons.length}`}>
         {stage === "sliders" && (
@@ -347,6 +393,10 @@ export default function CareerPage() {
         {(stage === "result" || stage === "retired") && latestSeason && (
           <>
             <SeasonCard season={latestSeason} />
+            <LegacyTicker
+              breakdown={latestSeason.legacyBreakdown}
+              delta={latestSeason.legacyDelta}
+            />
             {stage === "result" && (
               <div className="career-stage-actions">
                 <button type="button" className="spin-button" onClick={handleContinue}>

@@ -23,7 +23,7 @@ function GuestHero() {
         Spin the wheel, draft one attribute at a time from real ATP legends and pros, and
         build a custom tennis player of your own.
       </p>
-      <Link to="/draft">
+      <Link to="/guide">
         <button type="button" className="spin-button">
           Start Build
         </button>
@@ -83,7 +83,7 @@ function Dashboard({ user, builds }) {
       </div>
 
       <div className="dashboard-actions">
-        <Link to="/draft">
+        <Link to="/guide">
           <button type="button" className="spin-button">
             Start New Build
           </button>
@@ -133,7 +133,7 @@ function Dashboard({ user, builds }) {
 
       {builds.length === 0 && (
         <p>
-          No builds yet - <Link to="/draft">start your first one</Link>.
+          No builds yet - <Link to="/guide">start your first one</Link>.
         </p>
       )}
     </div>

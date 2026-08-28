@@ -1052,9 +1052,16 @@ button {
   margin: 0;
 }
 
-/* ---------- Trophy case ---------- */
-.trophy-case {
+/* ---------- Trophy case + Legacy badge ---------- */
+.career-top-widgets {
   width: 100%;
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.trophy-case {
+  flex: 1;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
@@ -1239,6 +1246,105 @@ button {
   color: #ff8a8a;
 }
 
+/* ---------- Legacy Score ---------- */
+.legacy-badge {
+  min-width: 140px;
+  background: var(--ink-panel);
+  border: 1px solid var(--tier-legend);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.legacy-badge-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+
+.legacy-badge-value {
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  color: var(--tier-legend);
+  text-shadow: 0 0 10px rgba(233, 194, 95, 0.4);
+  animation: trophy-pop 0.5s ease-out;
+}
+
+.legacy-ticker {
+  width: 100%;
+  background: var(--ink);
+  border: 1px dashed var(--ink-panel-light);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-top: 10px;
+}
+
+.legacy-ticker-title {
+  margin: 0 0 8px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+
+.legacy-ticker-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.legacy-ticker-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  opacity: 0;
+  animation: ticker-line-in 0.35s ease-out forwards;
+}
+
+.legacy-ticker-line.up {
+  color: var(--ball);
+}
+
+.legacy-ticker-line.down {
+  color: #ff8a8a;
+}
+
+.legacy-ticker-total {
+  margin: 8px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--ink-panel-light);
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  text-align: right;
+}
+
+.legacy-ticker-total.up {
+  color: var(--ball);
+}
+
+.legacy-ticker-total.down {
+  color: #ff8a8a;
+}
+
+@keyframes ticker-line-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 @keyframes panel-in {
   from {
     opacity: 0;
@@ -1421,8 +1527,107 @@ button {
   color: var(--muted);
 }
 
+/* ---------- Guide / How to Play ---------- */
+.guide-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 32px 16px 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  text-align: center;
+}
+
+.guide-intro {
+  max-width: 560px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.guide-sections {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.guide-card {
+  background: var(--ink-panel);
+  border: 1px solid var(--ink-panel-light);
+  border-radius: 16px;
+  padding: 24px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.guide-card-icon {
+  font-size: 2rem;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.guide-card h2 {
+  margin: 0 0 6px;
+  font-size: 1.15rem;
+}
+
+.guide-card-body p {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.guide-card-body p:last-child {
+  margin-bottom: 0;
+}
+
+.guide-card-body strong {
+  color: var(--paper);
+}
+
+.guide-list {
+  margin: 0 0 10px;
+  padding-left: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.guide-list li {
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.guide-list strong {
+  color: var(--paper);
+}
+
+.guide-list-up {
+  color: var(--ball);
+  font-weight: 700;
+}
+
+.guide-list-down {
+  color: #ff8a8a;
+  font-weight: 700;
+}
+
+.guide-cta {
+  margin-top: 8px;
+}
+
 /* ---------- Small screens ---------- */
 @media (max-width: 640px) {
+  .guide-sections {
+    grid-template-columns: 1fr;
+  }
+
   .player-model {
     grid-template-columns: 1fr;
     justify-items: center;
@@ -1446,5 +1651,9 @@ button {
 
   .trophy-case {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .career-top-widgets {
+    flex-direction: column;
   }
 }

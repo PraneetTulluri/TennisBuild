@@ -399,3 +399,34 @@ describe("summarizeCareer", () => {
     expect(summary.retirementAge).toBeNull();
   });
 });
+
+describe("Legacy Score breakdown", () => {
+  it("attaches a labeled legacyBreakdown to each season that sums to its legacyDelta, and that delta matches the running legacyScore change", () => {
+    const state = createCareerState(STRONG_ATTRIBUTES);
+    const next = simulateNextSeason(state, FAKE_POOL, MAX_SLIDERS);
+    const season = next.seasons[0];
+
+    expect(Array.isArray(season.legacyBreakdown)).toBe(true);
+    expect(season.legacyBreakdown.length).toBeGreaterThan(0);
+    const sum = season.legacyBreakdown.reduce((total, entry) => total + entry.amount, 0);
+    expect(sum).toBe(season.legacyDelta);
+    expect(next.legacyScore).toBe(state.legacyScore + season.legacyDelta);
+
+    // "Season Played" is unconditional - every season contributes at least this.
+    expect(season.legacyBreakdown.some((entry) => entry.label === "Season Played")).toBe(
+      true
+    );
+  });
+
+  it("includes a Grand Slam Titles line only when a Slam was actually won", () => {
+    const state = createCareerState(STRONG_ATTRIBUTES);
+    const next = simulateNextSeason(state, FAKE_POOL, MAX_SLIDERS);
+    const season = next.seasons[0];
+    const slamEntry = season.legacyBreakdown.find((e) => e.label === "Grand Slam Titles");
+    if (season.slamTitles > 0) {
+      expect(slamEntry.amount).toBe(season.slamTitles * 102);
+    } else {
+      expect(slamEntry).toBeUndefined();
+    }
+  });
+});

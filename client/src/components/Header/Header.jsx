@@ -22,6 +22,7 @@ export default function Header() {
       </Link>
       <nav className="site-header-nav">
         <Link to="/draft">Build</Link>
+        <Link to="/guide">How to Play</Link>
         <Link to="/builds">My Builds</Link>
         <Link to="/leaderboard">Leaderboard</Link>
         {!loading && user && (

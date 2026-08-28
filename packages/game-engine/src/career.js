@@ -417,20 +417,45 @@ function peakRankingBonus(ranking) {
   return 0;
 }
 
-function seasonLegacyGain(season) {
-  const titleWeight =
-    season.slamTitles * 100 +
-    season.masterTitles * 15 +
-    (season.slamTitles + season.masterTitles + season.tourTitles) * 2;
-  return titleWeight + peakRankingBonus(season.ranking) / 5 + 3;
-}
-
 /** A real decline off the career's established peak - not just a merely-okay season. */
 function declinePenalty(ranking, priorPeakRanking) {
   if (priorPeakRanking === null) return 0;
   if (ranking > priorPeakRanking * 3 || ranking > 200) return 40;
   if (ranking > priorPeakRanking * 1.8 || ranking > 100) return 15;
   return 0;
+}
+
+/**
+ * Builds this season's Legacy Score change as a labeled breakdown, not
+ * just a single number - the UI shows this as a live ticker so a season
+ * that swings Legacy up or down is legible in the moment, not just a
+ * final total at retirement. Every entry with a nonzero amount is
+ * included; the season's net `legacyDelta` is just their sum.
+ */
+function buildLegacyBreakdown(season, priorPeakRanking) {
+  const entries = [];
+  if (season.slamTitles > 0) {
+    entries.push({ label: "Grand Slam Titles", amount: season.slamTitles * 102 });
+  }
+  if (season.masterTitles > 0) {
+    entries.push({ label: "Masters Titles", amount: season.masterTitles * 17 });
+  }
+  if (season.tourTitles > 0) {
+    entries.push({ label: "Tour Titles", amount: season.tourTitles * 2 });
+  }
+  const rankingBonus = Math.round(peakRankingBonus(season.ranking) / 5);
+  if (rankingBonus > 0) {
+    entries.push({ label: "Ranking Bonus", amount: rankingBonus });
+  }
+  entries.push({ label: "Season Played", amount: 3 });
+  const decline = declinePenalty(season.ranking, priorPeakRanking);
+  if (decline > 0) {
+    entries.push({ label: "Decline Off Peak", amount: -decline });
+  }
+  if (season.injury?.careerEnding) {
+    entries.push({ label: "Career-Ending Injury", amount: -80 });
+  }
+  return entries;
 }
 
 // ---------- Career state (mirrors draft.js's pure-state-machine pattern) ----------
@@ -527,8 +552,6 @@ export function simulateNextSeason(state, playerPool, sliders = DEFAULT_SLIDERS)
     ranking,
   };
 
-  let legacyGain = seasonLegacyGain(season) - declinePenalty(ranking, priorPeakRanking);
-
   const nextAge = age + 1;
   let forcedRetired = false;
   let retirementReason = null;
@@ -543,12 +566,12 @@ export function simulateNextSeason(state, playerPool, sliders = DEFAULT_SLIDERS)
     if (Math.random() < catastrophicChance) {
       forcedRetired = true;
       retirementReason = "career-ending-injury";
-      season.injury.careerEnding = true;
       // A real cost, not just a neutral early stop - unfulfilled
       // potential is part of what makes recklessness a genuine risk
       // rather than a strictly-dominant "grow fast, worst case is just
-      // stopping early" strategy.
-      legacyGain -= 80;
+      // stopping early" strategy. Folded into the breakdown below via
+      // season.injury.careerEnding, so the live ticker shows it too.
+      season.injury.careerEnding = true;
     }
   }
 
@@ -557,7 +580,12 @@ export function simulateNextSeason(state, playerPool, sliders = DEFAULT_SLIDERS)
     retirementReason = "age-limit";
   }
 
-  const nextLegacyScore = state.legacyScore + legacyGain;
+  const legacyBreakdown = buildLegacyBreakdown(season, priorPeakRanking);
+  const legacyDelta = legacyBreakdown.reduce((sum, entry) => sum + entry.amount, 0);
+  season.legacyDelta = legacyDelta;
+  season.legacyBreakdown = legacyBreakdown;
+
+  const nextLegacyScore = state.legacyScore + legacyDelta;
 
   const drift = computeAttributeDrift({
     age,

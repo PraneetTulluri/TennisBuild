@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import Header from "./components/Header/Header.jsx";
 import HomePage from "./pages/HomePage.jsx";
+import GuidePage from "./pages/GuidePage.jsx";
 import DraftPage from "./pages/DraftPage.jsx";
 import ResultPage from "./pages/ResultPage.jsx";
 import CareerPage from "./pages/CareerPage.jsx";
@@ -18,6 +19,7 @@ export default function App() {
         <Header />
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/guide" element={<GuidePage />} />
           <Route path="/draft" element={<DraftPage />} />
           <Route path="/result" element={<ResultPage />} />
           <Route path="/career" element={<CareerPage />} />
