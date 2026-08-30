@@ -70,9 +70,26 @@
   box-sizing: border-box;
 }
 
+/* A single faint tennis-court line diagram (baselines, sidelines,
+   service boxes, net line, center marks - real court proportions,
+   drawn once as an inline SVG data URI so no extra asset request is
+   needed) sits fixed in the viewport under the page's own radial
+   gradient - subtle enough (5-7% opacity strokes) to read as ambient
+   texture rather than compete with any actual content on top of it. */
 body {
   margin: 0;
-  background: radial-gradient(circle at top, var(--court-green-dark), var(--ink) 70%);
+  background-color: var(--ink);
+  background-image:
+    url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzNjAgNzgwIiBmaWxsPSJub25lIj4KICA8cmVjdCB4PSIxIiB5PSIxIiB3aWR0aD0iMzU4IiBoZWlnaHQ9Ijc3OCIgc3Ryb2tlPSJyZ2JhKDI0NCwyNDcsMjM4LDAuMDU1KSIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPGxpbmUgeDE9IjQ1IiB5MT0iMCIgeDI9IjQ1IiB5Mj0iNzgwIiBzdHJva2U9InJnYmEoMjQ0LDI0NywyMzgsMC4wNSkiIHN0cm9rZS13aWR0aD0iMiIvPgogIDxsaW5lIHgxPSIzMTUiIHkxPSIwIiB4Mj0iMzE1IiB5Mj0iNzgwIiBzdHJva2U9InJnYmEoMjQ0LDI0NywyMzgsMC4wNSkiIHN0cm9rZS13aWR0aD0iMiIvPgogIDxsaW5lIHgxPSIwIiB5MT0iMzkwIiB4Mj0iMzYwIiB5Mj0iMzkwIiBzdHJva2U9InJnYmEoMjQ0LDI0NywyMzgsMC4wNzUpIiBzdHJva2Utd2lkdGg9IjMiLz4KICA8bGluZSB4MT0iNDUiIHkxPSIxODAiIHgyPSIzMTUiIHkyPSIxODAiIHN0cm9rZT0icmdiYSgyNDQsMjQ3LDIzOCwwLjA1KSIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPGxpbmUgeDE9IjQ1IiB5MT0iNjAwIiB4Mj0iMzE1IiB5Mj0iNjAwIiBzdHJva2U9InJnYmEoMjQ0LDI0NywyMzgsMC4wNSkiIHN0cm9rZS13aWR0aD0iMiIvPgogIDxsaW5lIHgxPSIxODAiIHkxPSIxODAiIHgyPSIxODAiIHkyPSI2MDAiIHN0cm9rZT0icmdiYSgyNDQsMjQ3LDIzOCwwLjA1KSIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPGxpbmUgeDE9IjE4MCIgeTE9IjAiIHgyPSIxODAiIHkyPSIxMiIgc3Ryb2tlPSJyZ2JhKDI0NCwyNDcsMjM4LDAuMDUpIiBzdHJva2Utd2lkdGg9IjIiLz4KICA8bGluZSB4MT0iMTgwIiB5MT0iNzY4IiB4Mj0iMTgwIiB5Mj0iNzgwIiBzdHJva2U9InJnYmEoMjQ0LDI0NywyMzgsMC4wNSkiIHN0cm9rZS13aWR0aD0iMiIvPgo8L3N2Zz4K"),
+    radial-gradient(circle at top, var(--court-green-dark), var(--ink) 70%);
+  background-repeat: no-repeat, no-repeat;
+  background-position:
+    center,
+    center top;
+  background-size:
+    min(640px, 82vmin) auto,
+    cover;
+  background-attachment: fixed, fixed;
   color: var(--paper);
   font-family: var(--font-body);
   min-height: 100vh;
@@ -92,17 +109,26 @@ button {
   cursor: pointer;
 }
 
-/* ---------- Site header ---------- */
+/* ---------- Site header: compact bar + dropdown panel ----------
+   A single always-visible bar (brand + one menu trigger) at every
+   screen width, not just below a mobile breakpoint - clicking the
+   trigger drops an animated panel (see Header.jsx's motion.nav) down
+   from underneath it with every link plus the account section. Kept
+   deliberately minimal at rest so the header never competes with the
+   page underneath it for attention. */
 .site-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--ink-panel);
+  border-bottom: 1px solid var(--ink-panel-light);
+}
+
+.site-header-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 14px 24px;
-  background: var(--ink-panel);
-  border-bottom: 1px solid var(--ink-panel-light);
-  position: sticky;
-  top: 0;
-  z-index: 10;
 }
 
 .site-header-brand {
@@ -114,23 +140,90 @@ button {
   font-size: 1.1rem;
 }
 
-.site-header-nav {
+.site-header-menu-trigger {
   display: flex;
   align-items: center;
-  gap: 18px;
-  font-size: 0.9rem;
-}
-
-.site-header-nav a {
-  color: var(--muted);
-}
-
-.site-header-nav a:hover {
+  gap: 9px;
+  background: var(--ink-panel-light);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 8px 16px;
   color: var(--paper);
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.site-header-menu-trigger:hover {
+  border-color: var(--ball);
+}
+
+.site-header-menu-caret {
+  width: 7px;
+  height: 7px;
+  margin-top: -3px;
+  border-right: 2px solid var(--paper);
+  border-bottom: 2px solid var(--paper);
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
+}
+
+.site-header-menu-caret.open {
+  margin-top: 1px;
+  transform: rotate(-135deg);
+}
+
+.site-header-panel {
+  overflow: hidden;
+  border-top: 1px solid var(--ink-panel-light);
+}
+
+.site-header-panel-inner {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 24px 18px;
+}
+
+.site-header-panel-link {
+  padding: 12px 2px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  border-bottom: 1px solid var(--ink-panel-light);
+}
+
+.site-header-panel-link:hover {
+  color: var(--paper);
+}
+
+.site-header-panel-link.active {
+  color: var(--ball);
+}
+
+.site-header-panel-divider {
+  height: 1px;
+  margin: 12px 0;
+  background: var(--ink-panel-light);
+}
+
+.site-header-panel-account {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 2px;
+}
+
+.site-header-panel-account-links {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .site-header-user {
   color: var(--muted);
+  font-size: 0.9rem;
 }
 
 .site-header-link-button {
@@ -149,70 +242,10 @@ button {
 .site-header-cta {
   background: var(--ball);
   color: var(--ink);
-  padding: 6px 14px;
+  padding: 8px 18px;
   border-radius: 999px;
   font-weight: 600;
   text-decoration: none;
-}
-
-/* Hamburger toggle - hidden by default, only shown (and the nav turned
-   into a dropdown) below the breakpoint where the full link list no
-   longer fits on one line. See the site-header media query further down
-   for the collapsed layout itself. */
-.site-header-menu-toggle {
-  display: none;
-  flex-direction: column;
-  justify-content: center;
-  gap: 5px;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  background: none;
-  border: none;
-}
-
-.site-header-menu-toggle span {
-  display: block;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--paper);
-}
-
-@media (max-width: 760px) {
-  .site-header-menu-toggle {
-    display: flex;
-  }
-
-  .site-header-nav {
-    display: none;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
-    background: var(--ink-panel);
-    border-bottom: 1px solid var(--ink-panel-light);
-    padding: 8px 24px 16px;
-  }
-
-  .site-header-nav.open {
-    display: flex;
-  }
-
-  .site-header-nav a,
-  .site-header-nav .site-header-link-button,
-  .site-header-user {
-    width: 100%;
-    padding: 10px 0;
-    font-size: 1rem;
-  }
-
-  .site-header-cta {
-    display: inline-block;
-    margin-top: 4px;
-  }
 }
 
 /* ---------- Auth pages ---------- */
