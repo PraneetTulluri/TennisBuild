@@ -11,6 +11,7 @@ import {
 import { fetchPlayers } from "../api/players.js";
 import { fetchBuild } from "../api/builds.js";
 import BuildResultView from "../components/BuildResultView/BuildResultView.jsx";
+import ShareButton from "../components/ShareButton/ShareButton.jsx";
 
 /**
  * Revisits a previously-saved build via its durable URL. Only `locked`
@@ -118,6 +119,7 @@ export default function SavedBuildPage() {
       )}
 
       <div className="result-actions">
+        <ShareButton buildId={build._id} name={build.name} />
         <Link to="/builds">
           <button type="button" className="secondary-button">
             Back to My Builds

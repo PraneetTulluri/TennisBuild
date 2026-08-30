@@ -8,6 +8,7 @@ import {
   nearestPlayerComps,
 } from "@tennisbuild/game-engine";
 import BuildResultView from "../components/BuildResultView/BuildResultView.jsx";
+import ShareButton from "../components/ShareButton/ShareButton.jsx";
 import { saveBuild, renameBuild } from "../api/builds.js";
 import { randomBuildName } from "../utils/randomBuildName.js";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -158,22 +159,23 @@ export default function ResultPage() {
           </p>
         )}
         {savedBuild && !user && (
-          <>
-            <p className="save-confirmation">
-              ✅ Saved to <Link to="/builds">My Builds</Link> on this browser
+          <p className="save-confirmation">
+            ✅ Saved to <Link to="/builds">My Builds</Link> on this browser
+          </p>
+        )}
+        {savedBuild && <ShareButton buildId={savedBuild._id} name={savedBuild.name} />}
+        {savedBuild && !user && (
+          <div className="save-signup-nudge">
+            <p>
+              Guest builds don&rsquo;t show up on the <strong>Leaderboard</strong> - sign
+              up to add this one and keep it saved for good, on any device.
             </p>
-            <div className="save-signup-nudge">
-              <p>
-                Guest builds don&rsquo;t show up on the <strong>Leaderboard</strong> -
-                sign up to add this one and keep it saved for good, on any device.
-              </p>
-              <Link to="/register">
-                <button type="button" className="secondary-button">
-                  Sign Up Free
-                </button>
-              </Link>
-            </div>
-          </>
+            <Link to="/register">
+              <button type="button" className="secondary-button">
+                Sign Up Free
+              </button>
+            </Link>
+          </div>
         )}
       </div>
 

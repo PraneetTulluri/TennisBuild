@@ -4,7 +4,35 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TennisBuild</title>
+    <!-- Everything between the two markers below is the default preview
+         for the site as a whole. /builds/:id pages get their own dynamic
+         version of this exact block (matched by these same two marker
+         comments) swapped in server-side (see server/src/index.js)
+         before a link-preview crawler (Discord/Twitter/iMessage/etc.)
+         ever sees it, so a shared build link shows that build's own
+         name/stats instead of the generic site description. -->
+    <!-- SHARE_META_START -->
+    <title>TennisBuild - Build a Legend</title>
+    <meta
+      name="description"
+      content="Draft a custom tennis pro from real ATP legends and stars, then simulate their whole career."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="TennisBuild" />
+    <meta property="og:title" content="TennisBuild - Build a Legend" />
+    <meta
+      property="og:description"
+      content="Draft a custom tennis pro from real ATP legends and stars, then simulate their whole career."
+    />
+    <meta property="og:image" content="/og-image.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="TennisBuild - Build a Legend" />
+    <meta
+      name="twitter:description"
+      content="Draft a custom tennis pro from real ATP legends and stars, then simulate their whole career."
+    />
+    <meta name="twitter:image" content="/og-image.png" />
+    <!-- SHARE_META_END -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

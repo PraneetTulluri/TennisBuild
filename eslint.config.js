@@ -38,6 +38,7 @@ export default [
         localStorage: "readonly",
         crypto: "readonly",
         ResizeObserver: "readonly",
+        navigator: "readonly",
       },
     },
     rules: {
