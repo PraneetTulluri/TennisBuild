@@ -1485,6 +1485,45 @@ button {
   max-width: 520px;
 }
 
+/* Account-level rating (see User.js's pvp field) - shown once per page,
+   not per build, since every build shares the same account rating. */
+.pvp-rating-badge {
+  display: flex;
+  gap: 28px;
+  padding: 14px 28px;
+  background: var(--ink-panel);
+  border: 1px solid var(--ink-panel-light);
+  border-radius: 14px;
+}
+
+.pvp-rating-elo,
+.pvp-rating-record {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.pvp-rating-elo strong {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  color: var(--ball);
+}
+
+.pvp-rating-record strong {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  color: var(--paper);
+}
+
+.pvp-rating-elo span,
+.pvp-rating-record span {
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .pvp-team-picker {
   width: 100%;
   display: flex;
@@ -1591,23 +1630,161 @@ button {
   letter-spacing: 0.04em;
 }
 
-.pvp-roster-elo {
-  margin-top: 6px;
-  font-size: 0.85rem;
-  color: var(--tier-current);
-  font-weight: 600;
-}
-
-.pvp-roster-record {
-  font-size: 0.75rem;
-  color: var(--muted);
-}
-
 .pvp-challenge-block {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
+}
+
+/* ---------- PvP surface wheel ---------- */
+.pvp-surface-wheel {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.pvp-surface-wheel-viewport {
+  position: relative;
+  width: 180px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--ink-panel);
+  border: 1px solid var(--ink-panel-light);
+}
+
+.pvp-surface-wheel-pointer {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 10px solid var(--ball);
+  z-index: 2;
+}
+
+.pvp-surface-wheel-strip {
+  display: flex;
+  will-change: transform;
+}
+
+.pvp-surface-wheel-strip.animate {
+  transition: transform 1.6s cubic-bezier(0.12, 0.85, 0.15, 1);
+}
+
+.pvp-surface-tile {
+  flex: 0 0 180px;
+  padding: 22px 0;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--paper);
+}
+
+.pvp-surface-hard {
+  background: color-mix(in srgb, var(--tier-current) 25%, var(--ink-panel));
+}
+
+.pvp-surface-clay {
+  background: color-mix(in srgb, var(--clay-orange) 30%, var(--ink-panel));
+}
+
+.pvp-surface-grass {
+  background: color-mix(in srgb, var(--court-green) 45%, var(--ink-panel));
+}
+
+/* ---------- PvP match playback ---------- */
+.pvp-match-stage {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.pvp-match-stage-label {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pvp-match-player {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  background: var(--ink-panel);
+  border: 1px solid var(--ink-panel-light);
+  border-radius: 16px;
+}
+
+.pvp-match-player-header {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95rem;
+}
+
+.pvp-match-player-header span:first-child {
+  text-align: right;
+}
+
+.pvp-match-player-sets {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  color: var(--ball);
+}
+
+.pvp-match-player-sets-row {
+  display: flex;
+  gap: 8px;
+}
+
+.pvp-set-pill {
+  min-width: 44px;
+  padding: 6px 8px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--muted);
+  border: 1px solid var(--ink-panel-light);
+}
+
+.pvp-set-pill.live {
+  color: var(--paper);
+  border-color: var(--tier-current);
+  animation: trophy-pop 0.3s ease-out;
+}
+
+.pvp-set-pill.complete {
+  color: var(--paper);
+  border-color: var(--ink-panel-light);
+}
+
+.pvp-skip-button {
+  font-size: 0.8rem;
+  padding: 6px 14px;
+}
+
+.pvp-match-player-result {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--ball);
 }
 
 /* ---------- PvP challenge reveal ---------- */
@@ -1644,9 +1821,23 @@ button {
 }
 
 .pvp-reveal-sub {
-  margin: 0 0 16px;
+  margin: 0 0 8px;
   font-size: 0.85rem;
   color: var(--muted);
+}
+
+.pvp-reveal-elo-total {
+  margin: 0 0 16px;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+}
+
+.pvp-reveal-elo-total.up {
+  color: var(--ball);
+}
+
+.pvp-reveal-elo-total.down {
+  color: #ff8a8a;
 }
 
 .pvp-reveal-matches {
@@ -1657,7 +1848,7 @@ button {
 
 .pvp-reveal-match {
   display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
@@ -1692,20 +1883,6 @@ button {
   color: var(--paper);
 }
 
-.pvp-reveal-elo {
-  font-size: 0.75rem;
-  min-width: 60px;
-  text-align: right;
-}
-
-.pvp-reveal-elo.up {
-  color: var(--ball);
-}
-
-.pvp-reveal-elo.down {
-  color: #ff8a8a;
-}
-
 /* ---------- PvP match history ---------- */
 .pvp-history-section {
   width: 100%;
@@ -1727,7 +1904,7 @@ button {
 
 .pvp-history-row {
   display: grid;
-  grid-template-columns: auto 1fr auto auto auto;
+  grid-template-columns: auto 1fr auto auto auto auto;
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
@@ -1756,6 +1933,19 @@ button {
 
 .pvp-history-score {
   font-family: var(--font-display);
+}
+
+.pvp-history-elo {
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.pvp-history-elo.up {
+  color: var(--ball);
+}
+
+.pvp-history-elo.down {
+  color: #ff8a8a;
 }
 
 .pvp-history-outcome {

@@ -56,8 +56,11 @@ const SORT_MODES = {
   },
   pvpElo: {
     label: "PvP Elo",
+    // Elo lives on the build's owner account, not the build itself (see
+    // User.js) - every build from the same account shares one rating.
     compare: (a, b) =>
-      (b.build.pvp?.elo ?? 0) - (a.build.pvp?.elo ?? 0) || b.overall - a.overall,
+      (b.build.userId?.pvp?.elo ?? 0) - (a.build.userId?.pvp?.elo ?? 0) ||
+      b.overall - a.overall,
   },
   newest: {
     label: "Newest",
@@ -170,9 +173,10 @@ export default function LeaderboardPage() {
                           ` · GOAT #${build.career.goatRank}`}
                       </span>
                     )}
-                    {build.pvp?.matchesPlayed > 0 && (
+                    {build.userId?.pvp?.matchesPlayed > 0 && (
                       <span className="build-list-pvp">
-                        ⚔️ {build.pvp.elo} Elo · {build.pvp.wins}-{build.pvp.losses}
+                        ⚔️ {build.userId.pvp.elo} Elo · {build.userId.pvp.wins}-
+                        {build.userId.pvp.losses}
                       </span>
                     )}
                   </div>

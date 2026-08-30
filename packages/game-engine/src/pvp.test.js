@@ -62,7 +62,22 @@ describe("simulatePvpMatch", () => {
       const loserSets = result.winner === "A" ? result.setsB : result.setsA;
       expect(winnerSets).toBe(3);
       expect(loserSets).toBeLessThanOrEqual(2);
-      expect(result.setResults.length).toBe(result.setsA + result.setsB);
+      expect(result.sets.length).toBe(result.setsA + result.setsB);
+    }
+  });
+
+  it("every set has a valid game score and a winner that matches its game count", () => {
+    for (let i = 0; i < 20; i++) {
+      const result = simulatePvpMatch(STRONG, WEAK, "clay");
+      for (const set of result.sets) {
+        expect(set.games.length).toBe(set.gamesA + set.gamesB);
+        const winnerGames = set.winner === "A" ? set.gamesA : set.gamesB;
+        const loserGames = set.winner === "A" ? set.gamesB : set.gamesA;
+        expect(winnerGames).toBeGreaterThanOrEqual(6);
+        // Either a clean 2-game-lead finish, or capped at 7 (covers 7-5
+        // and the 7-6 tiebreak case) - never anything looser than that.
+        expect(winnerGames - loserGames >= 2 || winnerGames === 7).toBe(true);
+      }
     }
   });
 

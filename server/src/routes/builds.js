@@ -53,8 +53,11 @@ router.get("/", async (req, res) => {
 // GET /api/builds/leaderboard - every saved build tied to a real account,
 // for browsing/sorting across *all* players, not just your own. Registered
 // ahead of GET /:id so "leaderboard" isn't swallowed as a build id.
-// `userId` is populated down to just its `name` (never email/passwordHash)
-// so a card can credit "by <name>" without leaking anything private.
+// `userId` is populated down to just its `name` and PvP rating (never
+// email/passwordHash) so a card can credit "by <name>" and show the
+// owner's ladder standing without leaking anything private. PvP Elo lives
+// on the account now, not the build (see User.js) - every build by the
+// same account shows the same rating, which is the point.
 //
 // Deliberately excludes guest-only builds (userId not set) - the
 // leaderboard is the incentive to sign up, not something a guest build
@@ -71,7 +74,7 @@ router.get("/leaderboard", async (req, res) => {
     const builds = await Build.find({ userId: { $exists: true } })
       .sort({ createdAt: -1 })
       .limit(500)
-      .populate("userId", "name")
+      .populate("userId", "name pvp")
       .lean();
     res.json(builds);
   } catch (err) {

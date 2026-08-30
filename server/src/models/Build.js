@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { ATTRIBUTE_KEYS, ELO_STARTING_RATING } from "@tennisbuild/game-engine";
+import { ATTRIBUTE_KEYS } from "@tennisbuild/game-engine";
 
 // A saved custom player build. Stores `locked` in the exact shape the
 // draft engine produces it (state.locked: each attribute key -> { value,
@@ -61,21 +61,6 @@ const buildSchema = new mongoose.Schema(
       goatIsAllTimeGreat: Boolean,
       legacyScore: Number,
       retirementReason: String,
-    },
-    // PvP ladder standing for this specific build (see routes/pvp.js) -
-    // tracked per-build, not per-user, since a "team" is just 3 builds
-    // and the site's whole mental model is already build-centric (the
-    // main Leaderboard, GOAT ranking, etc. all rank builds, not
-    // accounts). `wins`/`losses` only increment when this build is on
-    // the *challenging* side of a tie - a defending build's elo still
-    // moves from ties it's pulled into (a defense that's never tested
-    // shouldn't out-rank one that keeps winning), but its win/loss
-    // record doesn't, since it didn't choose to fight.
-    pvp: {
-      elo: { type: Number, default: ELO_STARTING_RATING },
-      wins: { type: Number, default: 0 },
-      losses: { type: Number, default: 0 },
-      matchesPlayed: { type: Number, default: 0 },
     },
   },
   { timestamps: true }
