@@ -1,3 +1,10 @@
+/* Tailwind is used only by the ported animate-ui components (see
+   src/components/animate-ui/) - everything else on the site is the
+   hand-written CSS below, unchanged. Importing it first means our own
+   rules (later in this file, equal or higher specificity) still win
+   over Tailwind's preflight reset for every element we already style. */
+@import "tailwindcss";
+
 /* ---------- Design tokens ---------- */
 :root {
   --court-green: #1b5e3a;
@@ -16,6 +23,47 @@
 
   --font-display: "Oswald", "Arial Narrow", sans-serif;
   --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* ---------- shadcn/animate-ui semantic tokens ----------
+     Only the ones the ported components actually reference (see each
+     file's Tailwind classes) - mapped onto our own palette above rather
+     than shadcn's defaults, so bg-primary/text-muted-foreground/etc.
+     resolve to court-green-palette colors instead of a generic theme. */
+  --background: var(--ink);
+  --foreground: var(--paper);
+  --card: var(--ink-panel);
+  --card-foreground: var(--paper);
+  --primary: var(--ball);
+  --primary-foreground: var(--ink);
+  --secondary: var(--clay-orange);
+  --secondary-foreground: var(--paper);
+  --accent: var(--ink-panel-light);
+  --accent-foreground: var(--paper);
+  --muted-shadcn: var(--ink-panel);
+  --muted-foreground: var(--muted);
+  --destructive: #ff8a8a;
+  --destructive-foreground: var(--ink);
+  --border: var(--ink-panel-light);
+  --ring: var(--ball);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-muted: var(--muted-shadcn);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
 }
 
 * {
@@ -169,8 +217,29 @@ button {
 
 /* ---------- Auth pages ---------- */
 .auth-page {
+  position: relative;
   max-width: 400px;
-  margin: 0 auto;
+  margin: 32px auto;
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+/* BubbleBackground (see components/animate-ui/components/backgrounds/bubble)
+   fills the page behind the form, dimmed and non-interactive so it reads
+   as ambient texture rather than something competing with the form for
+   attention. Its own default background-image is overridden below since
+   the component's built-in fallback is a plain violet/blue gradient. */
+.auth-page-bubble-bg {
+  position: absolute;
+  inset: 0;
+  opacity: 0.4;
+  background-image: none;
+  background: linear-gradient(160deg, var(--court-green-dark), var(--ink));
+}
+
+.auth-page-content {
+  position: relative;
+  z-index: 1;
   padding: 48px 16px;
   display: flex;
   flex-direction: column;
@@ -226,6 +295,16 @@ button {
   align-items: center;
   gap: 20px;
   text-align: center;
+}
+
+/* Wraps the RadialIntro orbit (see HomePage.jsx's Dashboard) - just
+   centers the stage and gives it a little breathing room above the
+   welcome heading, since it's flush against .dashboard-page's own gap
+   otherwise. */
+.dashboard-orbit {
+  display: flex;
+  justify-content: center;
+  margin-bottom: -8px;
 }
 
 .dashboard-stats {
@@ -1087,7 +1166,7 @@ button {
 
 /* ---------- My Builds ---------- */
 .builds-page {
-  max-width: 640px;
+  max-width: 860px;
   margin: 0 auto;
   padding: 32px 16px 64px;
   display: flex;
@@ -1142,6 +1221,112 @@ button {
 
 .build-list-info span.build-list-career {
   color: var(--tier-legend);
+}
+
+/* ---------- Build flip cards (My Builds) ----------
+   Uses the animate-ui FlipCard port (components/animate-ui/community) -
+   the 3D rotateY flip itself is driven by `motion` inline styles in that
+   component; everything here is just the two faces' size/position/look. */
+.build-flip-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.build-flip-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.build-flip-card {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  cursor: pointer;
+  perspective: 1200px;
+}
+
+.build-flip-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--ink-panel-light);
+  background: linear-gradient(160deg, var(--ink-panel), var(--ink-panel-light));
+  text-align: center;
+}
+
+.build-flip-card:hover .build-flip-face {
+  border-color: var(--ball);
+}
+
+.build-flip-back {
+  background: linear-gradient(160deg, var(--ink-panel-light), var(--ink-panel));
+}
+
+.build-flip-overall {
+  font-family: var(--font-display);
+  font-size: 2.6rem;
+  line-height: 1;
+  color: var(--ball);
+}
+
+.build-flip-name {
+  font-size: 1rem;
+}
+
+.build-flip-archetype {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.build-flip-back-kicker {
+  margin: 0 0 4px;
+  font-size: 0.7rem;
+  color: var(--ball);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.build-flip-stats {
+  display: flex;
+  gap: 16px;
+}
+
+.build-flip-stat-value {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  color: var(--paper);
+}
+
+.build-flip-stat-label {
+  margin: 2px 0 0;
+  font-size: 0.65rem;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.build-flip-goat {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: var(--tier-legend);
+}
+
+.build-flip-empty-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
 }
 
 /* ---------- Leaderboard ---------- */

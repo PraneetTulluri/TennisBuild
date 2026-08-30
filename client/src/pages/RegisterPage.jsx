@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
+import { BubbleBackground } from "../components/animate-ui/components/backgrounds/bubble.jsx";
+import { AUTH_BUBBLE_COLORS } from "../utils/authBubbleColors.js";
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -27,46 +29,53 @@ export default function RegisterPage() {
 
   return (
     <div className="auth-page">
-      <p className="result-kicker">Join TennisBuild</p>
-      <h1>Create Account</h1>
-      <form className="auth-form" onSubmit={handleSubmit}>
-        <label>
-          Name
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={40}
-            required
-          />
-        </label>
-        <label>
-          Email
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </label>
-        <label>
-          Password
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            minLength={6}
-            required
-          />
-        </label>
-        {error && <p className="draft-error">{error}</p>}
-        <button type="submit" className="spin-button" disabled={submitting}>
-          {submitting ? "Creating account…" : "Sign Up"}
-        </button>
-      </form>
-      <p className="auth-switch">
-        Already have an account? <Link to="/login">Log in</Link>
-      </p>
+      <BubbleBackground
+        interactive={false}
+        colors={AUTH_BUBBLE_COLORS}
+        className="auth-page-bubble-bg"
+      />
+      <div className="auth-page-content">
+        <p className="result-kicker">Join TennisBuild</p>
+        <h1>Create Account</h1>
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <label>
+            Name
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={40}
+              required
+            />
+          </label>
+          <label>
+            Email
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </label>
+          <label>
+            Password
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              minLength={6}
+              required
+            />
+          </label>
+          {error && <p className="draft-error">{error}</p>}
+          <button type="submit" className="spin-button" disabled={submitting}>
+            {submitting ? "Creating account…" : "Sign Up"}
+          </button>
+        </form>
+        <p className="auth-switch">
+          Already have an account? <Link to="/login">Log in</Link>
+        </p>
+      </div>
     </div>
   );
 }

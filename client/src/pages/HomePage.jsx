@@ -8,11 +8,26 @@ import {
 import { useAuth } from "../context/AuthContext.jsx";
 import { fetchMyBuilds } from "../api/builds.js";
 import { fetchPlayers } from "../api/players.js";
+import { RadialIntro } from "../components/animate-ui/components/community/radial-intro.jsx";
+import { LiquidButton } from "../components/animate-ui/components/buttons/liquid.jsx";
 
 function attributesFromLocked(locked) {
   const result = {};
   for (const key of ATTRIBUTE_KEYS) result[key] = locked[key].value;
   return result;
+}
+
+// Shared by GuestHero (the two flanking columns) and Dashboard (the
+// radial orbit) - both just need "the real ATP roster's photos," fetched
+// once and picked from differently by each.
+function usePlayerRoster() {
+  const [players, setPlayers] = useState([]);
+  useEffect(() => {
+    fetchPlayers()
+      .then(setPlayers)
+      .catch(() => setPlayers([]));
+  }, []);
+  return players;
 }
 
 // Small Fisher-Yates shuffle - used once per page load to pick which real
@@ -53,13 +68,7 @@ function ShowcaseColumn({ players, side }) {
 }
 
 function GuestHero() {
-  const [players, setPlayers] = useState([]);
-
-  useEffect(() => {
-    fetchPlayers()
-      .then(setPlayers)
-      .catch(() => setPlayers([]));
-  }, []);
+  const players = usePlayerRoster();
 
   // A mix of legends and current stars with a real resolved photo, split
   // across two flanking columns - fills what used to be a lot of empty
@@ -84,9 +93,9 @@ function GuestHero() {
           and build a custom tennis player of your own.
         </p>
         <Link to="/guide">
-          <button type="button" className="spin-button">
+          <LiquidButton variant="tennis" size="lg">
             Start Build
-          </button>
+          </LiquidButton>
         </Link>
         <p className="landing-secondary-link">
           <Link to="/builds">View My Builds</Link>
@@ -102,6 +111,7 @@ function GuestHero() {
 }
 
 function Dashboard({ user, builds }) {
+  const players = usePlayerRoster();
   const buildsWithStats = builds.map((build) => {
     const attributes = attributesFromLocked(build.locked);
     return {
@@ -118,8 +128,24 @@ function Dashboard({ user, builds }) {
   const careersSimulated = builds.filter((b) => b.career?.simulated).length;
   const recent = buildsWithStats.slice(0, 4);
 
+  // A small orbiting ring of real ATP photos behind the welcome heading -
+  // purely a flourish (see RadialIntro, ported from animate-ui), so it's
+  // fine to just render nothing until photos have loaded rather than
+  // reserving space for it.
+  const orbitItems = useMemo(() => {
+    const withPhotos = shuffled(players.filter((p) => p.imageUrl));
+    return withPhotos
+      .slice(0, 7)
+      .map((p) => ({ id: p.slug, name: p.name, src: p.imageUrl }));
+  }, [players]);
+
   return (
     <div className="dashboard-page">
+      {orbitItems.length > 0 && (
+        <div className="dashboard-orbit">
+          <RadialIntro orbitItems={orbitItems} stageSize={190} imageSize={42} />
+        </div>
+      )}
       <p className="landing-kicker">Welcome back</p>
       <h1>{user.name}</h1>
 

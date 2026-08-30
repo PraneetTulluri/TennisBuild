@@ -37,6 +37,7 @@ export default [
         clearTimeout: "readonly",
         localStorage: "readonly",
         crypto: "readonly",
+        ResizeObserver: "readonly",
       },
     },
     rules: {

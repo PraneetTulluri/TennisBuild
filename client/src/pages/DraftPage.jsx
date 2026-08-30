@@ -6,6 +6,7 @@ import { useDraftState } from "../state/draftState.js";
 import Wheel from "../components/Wheel/Wheel.jsx";
 import AttributeCard from "../components/AttributeCard/AttributeCard.jsx";
 import PlayerModel from "../components/PlayerModel/PlayerModel.jsx";
+import { LiquidButton } from "../components/animate-ui/components/buttons/liquid.jsx";
 
 export default function DraftPage() {
   const navigate = useNavigate();
@@ -76,14 +77,9 @@ export default function DraftPage() {
           />
 
           <div className="draft-actions">
-            <button
-              type="button"
-              className="spin-button"
-              disabled={!canSpin}
-              onClick={spin}
-            >
+            <LiquidButton variant="tennis" size="lg" disabled={!canSpin} onClick={spin}>
               {complete ? "Draft Complete" : spinning ? "Spinning…" : "SPIN"}
-            </button>
+            </LiquidButton>
             <button
               type="button"
               className="secondary-button"

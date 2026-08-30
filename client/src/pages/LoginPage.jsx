@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
+import { BubbleBackground } from "../components/animate-ui/components/backgrounds/bubble.jsx";
+import { AUTH_BUBBLE_COLORS } from "../utils/authBubbleColors.js";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -26,35 +28,42 @@ export default function LoginPage() {
 
   return (
     <div className="auth-page">
-      <p className="result-kicker">Welcome Back</p>
-      <h1>Log In</h1>
-      <form className="auth-form" onSubmit={handleSubmit}>
-        <label>
-          Email
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </label>
-        <label>
-          Password
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </label>
-        {error && <p className="draft-error">{error}</p>}
-        <button type="submit" className="spin-button" disabled={submitting}>
-          {submitting ? "Logging in…" : "Log In"}
-        </button>
-      </form>
-      <p className="auth-switch">
-        No account yet? <Link to="/register">Sign up</Link>
-      </p>
+      <BubbleBackground
+        interactive={false}
+        colors={AUTH_BUBBLE_COLORS}
+        className="auth-page-bubble-bg"
+      />
+      <div className="auth-page-content">
+        <p className="result-kicker">Welcome Back</p>
+        <h1>Log In</h1>
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <label>
+            Email
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </label>
+          <label>
+            Password
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </label>
+          {error && <p className="draft-error">{error}</p>}
+          <button type="submit" className="spin-button" disabled={submitting}>
+            {submitting ? "Logging in…" : "Log In"}
+          </button>
+        </form>
+        <p className="auth-switch">
+          No account yet? <Link to="/register">Sign up</Link>
+        </p>
+      </div>
     </div>
   );
 }

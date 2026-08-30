@@ -6,6 +6,7 @@ import {
   computeArchetype,
 } from "@tennisbuild/game-engine";
 import { fetchMyBuilds } from "../api/builds.js";
+import { FlipCard } from "../components/animate-ui/components/community/flip-card.jsx";
 
 function attributesFromLocked(locked) {
   const result = {};
@@ -17,7 +18,11 @@ function attributesFromLocked(locked) {
  * Lists every build saved from this browser (scoped by the guest session
  * id in localStorage - see utils/guestSession.js, no auth yet). Overall/
  * archetype are recomputed client-side from the saved `locked` map rather
- * than trusting a stored value, same reasoning as SavedBuildPage.
+ * than trusting a stored value, same reasoning as SavedBuildPage. Each
+ * build renders as a FlipCard (see components/animate-ui/community) -
+ * front shows the overall/archetype at a glance, hovering flips to the
+ * career result (or a prompt to go simulate one) without leaving the
+ * page; clicking anywhere on the card still opens the full build page.
  */
 export default function MyBuildsPage() {
   const [builds, setBuilds] = useState(null);
@@ -44,7 +49,7 @@ export default function MyBuildsPage() {
       )}
 
       {builds && builds.length > 0 && (
-        <div className="builds-list">
+        <div className="build-flip-grid">
           {builds.map((build) => {
             const attributes = attributesFromLocked(build.locked);
             const overall = computeOverall(attributes);
@@ -53,23 +58,25 @@ export default function MyBuildsPage() {
               <Link
                 key={build._id}
                 to={`/builds/${build._id}`}
-                className="build-list-card"
+                className="build-flip-link"
               >
-                <div
-                  className={`build-list-overall${overall > 99 ? " elite-value" : ""}`}
-                >
-                  {overall}
-                </div>
-                <div className="build-list-info">
-                  <strong>{build.name}</strong>
-                  <span>{archetype.label}</span>
-                  {build.career?.simulated && (
-                    <span className="build-list-career">
-                      🏆 {build.career.slamTitles} Slams · Peak #
-                      {build.career.peakRanking}
-                    </span>
-                  )}
-                </div>
+                <FlipCard
+                  overall={overall}
+                  eliteValue={overall > 99}
+                  name={build.name}
+                  archetype={archetype.label}
+                  career={
+                    build.career?.simulated
+                      ? {
+                          slamTitles: build.career.slamTitles,
+                          peakRanking: build.career.peakRanking,
+                          retirementAge: build.career.retirementAge,
+                          goatRank: build.career.goatRank,
+                          goatIsAllTimeGreat: build.career.goatIsAllTimeGreat,
+                        }
+                      : null
+                  }
+                />
               </Link>
             );
           })}
