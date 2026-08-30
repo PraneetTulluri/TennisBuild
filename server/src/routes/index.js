@@ -2,6 +2,7 @@ import { Router } from "express";
 import playersRouter from "./players.js";
 import buildsRouter from "./builds.js";
 import authRouter from "./auth.js";
+import pvpRouter from "./pvp.js";
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.get("/health", (req, res) => {
 router.use("/players", playersRouter);
 router.use("/builds", buildsRouter);
 router.use("/auth", authRouter);
+router.use("/pvp", pvpRouter);
 
 export default router;

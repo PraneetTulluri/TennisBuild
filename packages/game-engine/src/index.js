@@ -39,3 +39,12 @@ export {
   resolveLifeEventChoice,
 } from "./career.js";
 export { GOAT_BENCHMARKS, computeGoatScore, computeGoatRanking } from "./goat.js";
+export { matchWinProbability } from "./match.js";
+export {
+  PVP_SURFACES,
+  ELO_STARTING_RATING,
+  randomPvpSurface,
+  simulatePvpMatch,
+  simulatePvpTie,
+  updateEloPair,
+} from "./pvp.js";

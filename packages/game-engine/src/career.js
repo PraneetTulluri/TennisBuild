@@ -1,5 +1,6 @@
 import { ATTRIBUTE_KEYS } from "./attributes.js";
 import { computeSurfaceStrength } from "./scoring.js";
+import { matchWinProbability } from "./match.js";
 
 // Career simulation: takes a finished build's attributes and simulates a
 // full career, one season at a time, from age 18 until retirement.
@@ -250,25 +251,8 @@ function catastrophicInjuryChance({
 }
 
 // ---------- Shared match model ----------
-
-/**
- * Win probability for one match, from each side's surface-specific
- * strength. A logistic curve on the strength gap means a big favorite is
- * still not a certainty (upsets stay possible - floor/ceiling of
- * 3%/97%), and a small mental-toughness edge nudges close matches
- * (the "clutch factor" called for in the Phase 0 design doc).
- */
-function matchWinProbability(
-  playerStrength,
-  opponentStrength,
-  playerMental,
-  opponentMental
-) {
-  const diff = playerStrength - opponentStrength;
-  const base = 1 / (1 + Math.exp(-diff / 12));
-  const clutch = (playerMental - opponentMental) / 400;
-  return clamp(base + clutch, 0.03, 0.97);
-}
+// matchWinProbability itself now lives in match.js, shared with PvP ties
+// (see pvp.js) so both stay on exactly the same win-probability math.
 
 function rollMatch(attributes, opponentAttributes, surface) {
   const playerStrength = computeSurfaceStrength(attributes, surface);

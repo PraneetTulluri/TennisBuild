@@ -11,6 +11,7 @@ import LeaderboardPage from "./pages/LeaderboardPage.jsx";
 import SavedBuildPage from "./pages/SavedBuildPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
+import PvpPage from "./pages/PvpPage.jsx";
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/career" element={<CareerPage />} />
           <Route path="/builds" element={<MyBuildsPage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
+          <Route path="/pvp" element={<PvpPage />} />
           <Route path="/builds/:id" element={<SavedBuildPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />

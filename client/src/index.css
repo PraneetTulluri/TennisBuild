@@ -1293,6 +1293,10 @@ button {
   color: var(--tier-legend);
 }
 
+.build-list-info span.build-list-pvp {
+  color: var(--tier-current);
+}
+
 /* ---------- Build flip cards (My Builds) ----------
    Uses the animate-ui FlipCard port (components/animate-ui/community) -
    the 3D rotateY flip itself is driven by `motion` inline styles in that
@@ -1461,6 +1465,315 @@ button {
 
 .leaderboard-rank-bronze {
   color: var(--clay-orange);
+}
+
+/* ---------- PvP ---------- */
+.pvp-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 16px 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+}
+
+.pvp-intro {
+  margin: 0;
+  color: var(--muted);
+  max-width: 520px;
+}
+
+.pvp-team-picker {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.pvp-picker-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.pvp-picker-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.pvp-picker-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 10px;
+  background: var(--ink-panel);
+  border: 1px solid var(--ink-panel-light);
+  border-radius: 12px;
+  color: var(--paper);
+  min-width: 0;
+}
+
+.pvp-picker-card:hover {
+  border-color: var(--tier-current);
+}
+
+.pvp-picker-card.selected {
+  border-color: var(--ball);
+  background: var(--ink-panel-light);
+}
+
+.pvp-picker-overall {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  color: var(--ball);
+}
+
+.pvp-picker-name {
+  width: 100%;
+  font-size: 0.8rem;
+  color: var(--muted);
+  overflow-wrap: break-word;
+}
+
+.pvp-roster {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pvp-roster-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pvp-roster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.pvp-roster-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 10px;
+  background: var(--ink-panel);
+  border: 1px solid var(--ink-panel-light);
+  border-radius: 12px;
+  min-width: 0;
+}
+
+.pvp-roster-card strong {
+  width: 100%;
+  font-size: 0.9rem;
+  overflow-wrap: break-word;
+}
+
+.pvp-roster-overall {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  color: var(--ball);
+}
+
+.pvp-roster-archetype {
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pvp-roster-elo {
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: var(--tier-current);
+  font-weight: 600;
+}
+
+.pvp-roster-record {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.pvp-challenge-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ---------- PvP challenge reveal ---------- */
+.pvp-reveal {
+  width: 100%;
+  padding: 20px;
+  background: var(--ink-panel);
+  border: 1px solid var(--ink-panel-light);
+  border-radius: 16px;
+  animation: panel-in 0.35s ease-out;
+}
+
+.pvp-reveal.win {
+  border-color: var(--ball);
+}
+
+.pvp-reveal.loss {
+  border-color: var(--clay-orange);
+}
+
+.pvp-reveal-headline {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  text-transform: uppercase;
+}
+
+.pvp-reveal.win .pvp-reveal-headline {
+  color: var(--ball);
+}
+
+.pvp-reveal.loss .pvp-reveal-headline {
+  color: #ff8a8a;
+}
+
+.pvp-reveal-sub {
+  margin: 0 0 16px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.pvp-reveal-matches {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pvp-reveal-match {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--ink);
+  border-radius: 8px;
+  border-left: 3px solid var(--ink-panel-light);
+  text-align: left;
+  font-size: 0.85rem;
+  animation: ticker-line-in 0.3s ease-out both;
+}
+
+.pvp-reveal-match.win {
+  border-left-color: var(--ball);
+}
+
+.pvp-reveal-match.loss {
+  border-left-color: var(--clay-orange);
+}
+
+.pvp-reveal-slot {
+  color: var(--muted);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.pvp-reveal-names {
+  color: var(--paper);
+}
+
+.pvp-reveal-score {
+  font-family: var(--font-display);
+  color: var(--paper);
+}
+
+.pvp-reveal-elo {
+  font-size: 0.75rem;
+  min-width: 60px;
+  text-align: right;
+}
+
+.pvp-reveal-elo.up {
+  color: var(--ball);
+}
+
+.pvp-reveal-elo.down {
+  color: #ff8a8a;
+}
+
+/* ---------- PvP match history ---------- */
+.pvp-history-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pvp-history-empty {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.pvp-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pvp-history-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--ink-panel);
+  border: 1px solid var(--ink-panel-light);
+  border-radius: 8px;
+  text-align: left;
+  font-size: 0.8rem;
+}
+
+.pvp-history-role {
+  color: var(--muted);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pvp-history-opponent {
+  color: var(--paper);
+  font-weight: 600;
+}
+
+.pvp-history-surface {
+  color: var(--muted);
+}
+
+.pvp-history-score {
+  font-family: var(--font-display);
+}
+
+.pvp-history-outcome {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: right;
+}
+
+.pvp-history-row.win .pvp-history-outcome {
+  color: var(--ball);
+}
+
+.pvp-history-row.loss .pvp-history-outcome {
+  color: #ff8a8a;
+}
+
+.pvp-history-row.watched .pvp-history-outcome {
+  color: var(--muted);
 }
 
 /* ---------- Career page ---------- */

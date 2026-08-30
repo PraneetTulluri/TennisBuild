@@ -186,6 +186,11 @@ function Dashboard({ user, builds }) {
             Leaderboard
           </button>
         </Link>
+        <Link to="/pvp">
+          <button type="button" className="secondary-button">
+            PvP Ladder
+          </button>
+        </Link>
       </div>
 
       {recent.length > 0 && (

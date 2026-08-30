@@ -7,6 +7,7 @@ const NAV_LINKS = [
   { to: "/draft", label: "Build" },
   { to: "/guide", label: "How to Play" },
   { to: "/leaderboard", label: "Leaderboard" },
+  { to: "/pvp", label: "PvP" },
   { to: "/builds", label: "My Builds" },
 ];
 

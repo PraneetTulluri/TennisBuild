@@ -54,6 +54,11 @@ const SORT_MODES = {
       return aPeak - bPeak || b.overall - a.overall;
     },
   },
+  pvpElo: {
+    label: "PvP Elo",
+    compare: (a, b) =>
+      (b.build.pvp?.elo ?? 0) - (a.build.pvp?.elo ?? 0) || b.overall - a.overall,
+  },
   newest: {
     label: "Newest",
     compare: (a, b) => new Date(b.build.createdAt) - new Date(a.build.createdAt),
@@ -163,6 +168,11 @@ export default function LeaderboardPage() {
                         {build.career.peakRanking}
                         {build.career.goatIsAllTimeGreat &&
                           ` · GOAT #${build.career.goatRank}`}
+                      </span>
+                    )}
+                    {build.pvp?.matchesPlayed > 0 && (
+                      <span className="build-list-pvp">
+                        ⚔️ {build.pvp.elo} Elo · {build.pvp.wins}-{build.pvp.losses}
                       </span>
                     )}
                   </div>
