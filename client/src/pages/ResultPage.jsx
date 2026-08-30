@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   computeArchetype,
@@ -8,7 +8,9 @@ import {
   nearestPlayerComps,
 } from "@tennisbuild/game-engine";
 import BuildResultView from "../components/BuildResultView/BuildResultView.jsx";
-import { saveBuild } from "../api/builds.js";
+import { saveBuild, renameBuild } from "../api/builds.js";
+import { randomBuildName } from "../utils/randomBuildName.js";
+import { useAuth } from "../context/AuthContext.jsx";
 
 /**
  * The finished build's result card. Reads the completed draft's data from
@@ -19,12 +21,15 @@ import { saveBuild } from "../api/builds.js";
 export default function ResultPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { locked, history, playerPool } = location.state ?? {};
 
   const [buildName, setBuildName] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [savedBuild, setSavedBuild] = useState(null);
+  const [renaming, setRenaming] = useState(false);
+  const autoSaveStarted = useRef(false);
 
   const attributes = useMemo(() => {
     if (!locked) return null;
@@ -61,17 +66,39 @@ export default function ResultPage() {
       }
     : null;
 
-  async function handleSave() {
-    if (!buildName.trim()) return;
+  // Every finished build saves itself the instant it's ready - no button
+  // to remember to click. If the player hasn't typed a name yet, a random
+  // tennis-flavored one fills in instead of leaving the build nameless;
+  // the name field right below stays fully editable afterward either way.
+  // Guarded by a ref (not just the savedBuild state) since React 19 dev
+  // mode double-invokes effects - state alone can't stop a second save
+  // from firing before the first one's response has come back.
+  useEffect(() => {
+    if (autoSaveStarted.current || !locked || !attributes) return;
+    autoSaveStarted.current = true;
+
+    const initialName = buildName.trim() || randomBuildName();
+    setBuildName(initialName);
     setSaving(true);
+    saveBuild({ name: initialName, locked, flavor })
+      .then(setSavedBuild)
+      .catch((err) => setSaveError(err.message))
+      .finally(() => setSaving(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locked, attributes]);
+
+  async function handleRename() {
+    const trimmed = buildName.trim();
+    if (!trimmed || !savedBuild || trimmed === savedBuild.name) return;
+    setRenaming(true);
     setSaveError(null);
     try {
-      const build = await saveBuild({ name: buildName.trim(), locked, flavor });
-      setSavedBuild(build);
+      const updated = await renameBuild(savedBuild._id, trimmed);
+      setSavedBuild(updated);
     } catch (err) {
       setSaveError(err.message);
     } finally {
-      setSaving(false);
+      setRenaming(false);
     }
   }
 
@@ -88,6 +115,9 @@ export default function ResultPage() {
     );
   }
 
+  const nameChanged =
+    savedBuild && buildName.trim() && buildName.trim() !== savedBuild.name;
+
   return (
     <div className="result-page">
       <p className="result-kicker">Your Custom Player</p>
@@ -95,30 +125,43 @@ export default function ResultPage() {
       <BuildResultView locked={locked} flavor={flavor} derived={derived} />
 
       <div className="save-block">
-        {!savedBuild ? (
-          <>
-            <input
-              type="text"
-              className="save-name-input"
-              placeholder="Name your player"
-              value={buildName}
-              onChange={(e) => setBuildName(e.target.value)}
-              maxLength={40}
-            />
+        <label className="save-name-label" htmlFor="build-name">
+          {savedBuild ? "Saved as" : "Saving as"}
+        </label>
+        <div className="save-name-row">
+          <input
+            id="build-name"
+            type="text"
+            className="save-name-input"
+            placeholder="Name your player"
+            value={buildName}
+            onChange={(e) => setBuildName(e.target.value)}
+            maxLength={40}
+          />
+          {nameChanged && (
             <button
               type="button"
               className="secondary-button"
-              disabled={!buildName.trim() || saving}
-              onClick={handleSave}
+              disabled={renaming}
+              onClick={handleRename}
             >
-              {saving ? "Saving…" : "Save Build"}
+              {renaming ? "Renaming…" : "Rename"}
             </button>
-            {saveError && <p className="draft-error">Could not save: {saveError}</p>}
-          </>
-        ) : (
+          )}
+        </div>
+        {saving && <p className="save-confirmation">Saving…</p>}
+        {saveError && <p className="draft-error">Could not save: {saveError}</p>}
+        {savedBuild && (
           <p className="save-confirmation">
-            ✅ Saved as <strong>{savedBuild.name}</strong> ·{" "}
+            ✅ On the <Link to="/leaderboard">leaderboard</Link> ·{" "}
             <Link to="/builds">View My Builds</Link>
+          </p>
+        )}
+        {savedBuild && !user && (
+          <p className="save-signup-nudge">
+            Playing as a guest - this build is saved, but tied to this browser only.{" "}
+            <Link to="/register">Sign up</Link> to keep it forever and reach it from any
+            device.
           </p>
         )}
       </div>

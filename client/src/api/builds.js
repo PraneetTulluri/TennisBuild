@@ -43,6 +43,19 @@ export async function fetchBuild(id) {
   return response.json();
 }
 
+export async function renameBuild(id, name) {
+  const response = await fetch(`/api/builds/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ name }),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to rename build: ${response.status}`);
+  }
+  return response.json();
+}
+
 export async function saveCareerToBuild(id, careerData) {
   const response = await fetch(`/api/builds/${id}/career`, {
     method: "PATCH",

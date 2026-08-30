@@ -1166,8 +1166,23 @@ button {
   border-radius: 12px;
 }
 
-.save-name-input {
+.save-name-label {
+  align-self: flex-start;
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.save-name-row {
   width: 100%;
+  display: flex;
+  gap: 8px;
+}
+
+.save-name-input {
+  flex: 1;
+  min-width: 0;
   background: var(--ink);
   border: 1px solid var(--ink-panel-light);
   border-radius: 8px;
@@ -1195,6 +1210,19 @@ button {
 
 .save-confirmation a {
   color: var(--ball);
+}
+
+.save-signup-nudge {
+  margin: 0;
+  padding-top: 8px;
+  border-top: 1px dashed var(--ink-panel-light);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.save-signup-nudge a {
+  color: var(--ball);
+  font-weight: 600;
 }
 
 /* ---------- My Builds ---------- */

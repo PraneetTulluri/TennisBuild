@@ -1,10 +1,10 @@
 import { Link } from "react-router-dom";
 
-// One card per major system - icon, title, and a short explanation of
-// what it does and how it actually affects your build. `children` lets
-// a section include a bullet list on top of the intro paragraph for the
-// denser topics (career sim, Legacy Score) without every section needing
-// the same rigid shape.
+// One card per major system - icon, title, and a couple sentences. Kept
+// deliberately short (see the file-level comment below) - this used to
+// be a much denser page with bullet lists per section; cut down after
+// user feedback that it should convey the same points, just faster to
+// actually read before a first build.
 function GuideSection({ icon, title, children }) {
   return (
     <div className="guide-card">
@@ -16,12 +16,9 @@ function GuideSection({ icon, title, children }) {
 }
 
 /**
- * A single page explaining every system in the game before a new build
- * starts - the draft/wheel mechanic, scoring, saving/leaderboard, and
- * the career simulation's sliders/retirement/Legacy Score in enough
- * depth that none of it is a surprise once a career is actually running.
- * Reached from the landing page's and dashboard's "Start Build" buttons
- * instead of going straight to /draft.
+ * A quick, skimmable rundown of every system before a new build starts -
+ * intentionally short. Reached from the landing page's and dashboard's
+ * "Start Build" buttons instead of going straight to /draft.
  */
 export default function GuidePage() {
   return (
@@ -29,152 +26,48 @@ export default function GuidePage() {
       <p className="result-kicker">How To Play</p>
       <h1>Build a Legend</h1>
       <p className="guide-intro">
-        Draft a custom pro from real ATP legends and current stars, then simulate a whole
-        career - one season, one decision at a time. Here is what every piece actually
-        does.
+        Draft a custom pro from real ATP legends and stars, then simulate their whole
+        career. Here&rsquo;s the 60-second version.
       </p>
 
       <div className="guide-sections">
-        <GuideSection icon="🎡" title="Spin the Wheel">
+        <GuideSection icon="🎡" title="Spin & Draft">
           <p>
-            A build has 8 rounds - one per attribute category. Each spin reveals one
-            random real player, legend or current pro, with their full 8-attribute card.
-            Pick <strong>one</strong> attribute from that card to lock into the build -
-            that category is locked for good, and the real player&rsquo;s number becomes
-            your number.
-          </p>
-          <p>
-            Every build also gets <strong>1 Respin</strong> (re-roll the same round for a
-            different player) and <strong>1 Snag</strong> (grab a flanking
-            neighbor&rsquo;s card instead of the one landed on) - save them for a round
-            where the attribute actually needed is weak.
+            8 rounds, 8 attributes. Each spin reveals a real player&rsquo;s full stat card
+            - pick <strong>one</strong> number to lock in; that category is set for good.
+            A legend&rsquo;s signature skill can go past the normal 99 cap, all the way to
+            110. You also get <strong>1 free Respin</strong> and{" "}
+            <strong>1 free Snag</strong> (grab a neighboring card instead) - save them for
+            a round that actually needs it.
           </p>
         </GuideSection>
 
-        <GuideSection icon="⭐" title="Elite Signature Skills">
+        <GuideSection icon="📊" title="Overall & Archetype">
           <p>
-            Most attributes cap at 99. But a legend&rsquo;s (or, rarely, one of
-            today&rsquo;s very best active stars&rsquo;) single most iconic skill can go
-            past that ceiling, all the way up to <strong>110</strong> - Nadal&rsquo;s
-            mental toughness, Djokovic&rsquo;s return, Sampras&rsquo;s serve. Landing on
-            one of these is a real edge: a skill so exceptional that even a perfect 99
-            would undersell it.
+            Overall isn&rsquo;t a flat average - it&rsquo;s scored against whichever
+            archetype (Big Server, Baseline Grinder, Counterpuncher, and more) fits your
+            build best, so a specialist and an all-rounder both get a fair shot. Best
+            Surface works the same way for clay, grass, and hard courts.
           </p>
         </GuideSection>
 
-        <GuideSection icon="📊" title="Overall, Archetype & Surface">
+        <GuideSection icon="💾" title="Save & Compete">
           <p>
-            Overall is not a flat average of the 8 attributes - it is the score of
-            whichever <strong>archetype</strong> (Big Server, Baseline Grinder, Aggressive
-            Baseliner, Counterpuncher, Serve-and-Volley, Complete Player) fits the build
-            best, each weighting the 8 attributes differently. A specialist build and a
-            balanced build with the same raw total can end up with very different
-            Overalls, since each is measured against a different template.
-          </p>
-          <p>
-            Best Surface works the same way against clay, grass, and hard-court weightings
-            - it is the surface a build&rsquo;s specific attribute mix is actually suited
-            to.
+            Every build saves itself the moment it&rsquo;s finished - no extra step - and
+            lands on the <strong>Leaderboard</strong> right away, guest or logged in.
+            Rename it whenever you want. Sign up to keep your builds forever and reach
+            them from any device.
           </p>
         </GuideSection>
 
-        <GuideSection icon="💾" title="Save, Compare & Compete">
+        <GuideSection icon="🎾" title="Simulate a Career">
           <p>
-            Save a build as a guest, or log in to keep every build across devices and
-            browsers. Every saved build - guest or account - shows up on the{" "}
-            <strong>Leaderboard</strong>, sortable by Overall, Grand Slam Titles, GOAT
-            Rank, or Peak Ranking, so it is easy to see how a build stacks up against
-            everyone else&rsquo;s.
-          </p>
-        </GuideSection>
-
-        <GuideSection icon="🎾" title="Career Simulation">
-          <p>
-            The draft is a <strong>potential ceiling</strong>, not a starting point - an
-            18-year-old this talented is not fully formed yet. Actual attributes start
-            below that ceiling and close the gap over the early career, so a great draft
-            still means real (if limited) success young rather than either immediate
-            dominance or years of being unremarkable. Every season, two sliders get set
-            before simulating:
-          </p>
-          <ul className="guide-list">
-            <li>
-              <strong>Training Intensity</strong> - higher closes the gap to potential
-              faster, but raises injury risk.
-            </li>
-            <li>
-              <strong>Schedule Intensity</strong> - higher enters more Masters/tour
-              events, meaning more chances at titles and ranking points (Slams are always
-              all 4, unaffected either way) - but raises fatigue and injury risk.
-            </li>
-          </ul>
-          <p>
-            Injury risk is age-scaled, not just slider-scaled - the same intensity is a
-            real but modest bet at 19 and a much bigger one at 34, so going hard while
-            young and tapering off later is genuinely the safer path, not just flavor.
-            Coming back at the same intensity right after an injury carries its own
-            surcharge too - dialing both sliders down for a season after getting hurt is
-            what actually lowers the risk of it happening again.
-          </p>
-          <p>
-            Decline eventually sets in, but not at a fixed age - training hard
-            consistently pulls it earlier, a more conservative career pushes it later, out
-            into the late 30s for a genuinely well-managed build. A late-career prime like
-            a handful of real greats have had is a reachable reward for good management,
-            not a rare fluke. A sparse, random pool of off-court life events (a breakup, a
-            new baby, a viral moment, a feud with a rival, and many more) can also show up
-            a few times a career, each a choice with its own real effect - just enough
-            that no two careers ever play out quite the same way.
-          </p>
-          <p>
-            Retirement is a choice made every season - Continue to Next Season, or Retire
-            Now. The only <em>forced</em> endings are a hard age cap (44, so playing deep
-            into the 40s like a handful of real greats is possible) and a rare
-            career-ending injury, whose odds climb the harder training and schedule have
-            been pushed. Training and schedule can, and should, change season to season -
-            push hard while young, then ease off once age starts working against the
-            build.
-          </p>
-          <p>
-            Do not want to set sliders every single season?{" "}
-            <strong>Quick Sim Rest of Career</strong> auto-plays everything remaining with
-            a sensible age-aware strategy - hard while young, tapering down through
-            decline, easing off further right after an injury - and jumps straight to the
-            final result. It is available from age 18 on, so a whole career can be
-            quick-simmed in one click if the point is just seeing how a build turns out.
-          </p>
-        </GuideSection>
-
-        <GuideSection icon="🏆" title="Legacy Score & GOAT Ranking">
-          <p>
-            <strong>Legacy Score is what actually decides the All-Time ranking</strong> -
-            not just raw career totals. It is live throughout the whole career (watch the
-            badge next to the trophy case), and every season a ticker shows exactly what
-            moved it:
-          </p>
-          <ul className="guide-list">
-            <li>
-              <span className="guide-list-up">+</span> Grand Slam, Masters, and tour
-              titles, a ranking bonus for reaching the very top, and a small trickle just
-              for playing the season.
-            </li>
-            <li>
-              <span className="guide-list-down">−</span> <strong>Decline Off Peak</strong>{" "}
-              - a season that clearly falls off the career-best ranking costs Legacy.
-              Grinding through a rough decline year tarnishes the legacy even if the stats
-              stay respectable.
-            </li>
-            <li>
-              <span className="guide-list-down">−</span> A career-ending injury costs
-              Legacy on top of ending the career itself - real risk for reckless training
-              and schedule choices.
-            </li>
-          </ul>
-          <p>
-            Retiring voluntarily while still near the career peak locks in a{" "}
-            <strong>bonus</strong> instead - a smart, well-timed exit protects the legacy
-            in a way stats alone never show. The final Legacy Score is compared against 25
-            real legends&rsquo; careers to produce the GOAT ranking.
+            Play it a season at a time: set Training and Schedule intensity each season -
+            higher means faster growth and more titles, but more injury risk, especially
+            as your player ages. Retire on your own terms whenever you want, or hit{" "}
+            <strong>Quick Sim</strong> to auto-play the rest instantly. Your{" "}
+            <strong>Legacy Score</strong> - not just raw stats - decides your spot on the
+            all-time GOAT ranking, and retiring on top protects it.
           </p>
         </GuideSection>
       </div>

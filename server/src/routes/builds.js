@@ -86,6 +86,32 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// PATCH /api/builds/:id - rename a saved build. Separate from the
+// /career patch below since renaming has nothing to do with a career
+// result, and a build should be renameable at any point in its life
+// (right after the auto-save on the result page, or later from My
+// Builds) independent of whether a career's ever been simulated for it.
+router.patch("/:id", async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: "name is required" });
+    }
+    const build = await Build.findByIdAndUpdate(
+      req.params.id,
+      { name: name.trim() },
+      { new: true, runValidators: true }
+    );
+    if (!build) {
+      return res.status(404).json({ error: "Build not found" });
+    }
+    res.json(build);
+  } catch (err) {
+    console.error("[routes/builds] Failed to rename build:", err);
+    res.status(500).json({ error: "Failed to rename build" });
+  }
+});
+
 // PATCH /api/builds/:id/career - attach a simulated career's result once
 // it reaches retirement. A build can be saved without ever doing this.
 router.patch("/:id/career", async (req, res) => {
