@@ -50,17 +50,25 @@ router.get("/", async (req, res) => {
   }
 });
 
-// GET /api/builds/leaderboard - every saved build (guest and account alike),
+// GET /api/builds/leaderboard - every saved build tied to a real account,
 // for browsing/sorting across *all* players, not just your own. Registered
 // ahead of GET /:id so "leaderboard" isn't swallowed as a build id.
 // `userId` is populated down to just its `name` (never email/passwordHash)
-// so a card can credit "by <name>" without leaking anything private; a
-// guest-saved build simply has a null userId, shown as "Guest" client-side.
-// Capped at a generous limit as a sanity guardrail, not an expected ceiling
-// for this project's scale.
+// so a card can credit "by <name>" without leaking anything private.
+//
+// Deliberately excludes guest-only builds (userId not set) - the
+// leaderboard is the incentive to sign up, not something a guest build
+// gets automatically. This isn't a hard wall on playing itself: a guest
+// can still draft and get a build saved to their own browser (see POST /
+// above and My Builds) with zero friction, they just won't show up here
+// until they sign up - and claim-guest-builds (routes/auth.js) already
+// re-tags any of their existing builds with the new userId the moment
+// they do, so this list picks them up automatically with no extra step.
+// Capped at a generous limit as a sanity guardrail, not an expected
+// ceiling for this project's scale.
 router.get("/leaderboard", async (req, res) => {
   try {
-    const builds = await Build.find({})
+    const builds = await Build.find({ userId: { $exists: true } })
       .sort({ createdAt: -1 })
       .limit(500)
       .populate("userId", "name")

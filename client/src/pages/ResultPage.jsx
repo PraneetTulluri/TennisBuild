@@ -151,18 +151,29 @@ export default function ResultPage() {
         </div>
         {saving && <p className="save-confirmation">Saving…</p>}
         {saveError && <p className="draft-error">Could not save: {saveError}</p>}
-        {savedBuild && (
+        {savedBuild && user && (
           <p className="save-confirmation">
             ✅ On the <Link to="/leaderboard">leaderboard</Link> ·{" "}
             <Link to="/builds">View My Builds</Link>
           </p>
         )}
         {savedBuild && !user && (
-          <p className="save-signup-nudge">
-            Playing as a guest - this build is saved, but tied to this browser only.{" "}
-            <Link to="/register">Sign up</Link> to keep it forever and reach it from any
-            device.
-          </p>
+          <>
+            <p className="save-confirmation">
+              ✅ Saved to <Link to="/builds">My Builds</Link> on this browser
+            </p>
+            <div className="save-signup-nudge">
+              <p>
+                Guest builds don&rsquo;t show up on the <strong>Leaderboard</strong> -
+                sign up to add this one and keep it saved for good, on any device.
+              </p>
+              <Link to="/register">
+                <button type="button" className="secondary-button">
+                  Sign Up Free
+                </button>
+              </Link>
+            </div>
+          </>
         )}
       </div>
 

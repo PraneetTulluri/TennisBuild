@@ -1213,16 +1213,25 @@ button {
 }
 
 .save-signup-nudge {
-  margin: 0;
-  padding-top: 8px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 12px;
   border-top: 1px dashed var(--ink-panel-light);
-  font-size: 0.8rem;
+  text-align: center;
+}
+
+.save-signup-nudge p {
+  margin: 0;
+  font-size: 0.85rem;
   color: var(--muted);
 }
 
-.save-signup-nudge a {
+.save-signup-nudge strong {
   color: var(--ball);
-  font-weight: 600;
 }
 
 /* ---------- My Builds ---------- */
@@ -1391,6 +1400,21 @@ button {
 }
 
 /* ---------- Leaderboard ---------- */
+.leaderboard-signup-nudge {
+  margin: -4px 0 4px;
+  padding: 10px 16px;
+  background: var(--ink-panel);
+  border: 1px dashed var(--ink-panel-light);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.leaderboard-signup-nudge a {
+  color: var(--ball);
+  font-weight: 600;
+}
+
 .leaderboard-controls {
   align-self: flex-end;
   display: flex;

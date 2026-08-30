@@ -53,10 +53,10 @@ export default function GuidePage() {
 
         <GuideSection icon="💾" title="Save & Compete">
           <p>
-            Every build saves itself the moment it&rsquo;s finished - no extra step - and
-            lands on the <strong>Leaderboard</strong> right away, guest or logged in.
-            Rename it whenever you want. Sign up to keep your builds forever and reach
-            them from any device.
+            Every build saves itself the moment it&rsquo;s finished - no extra step, and
+            rename it whenever you want. Guest builds stay in <strong>My Builds</strong>{" "}
+            on your browser, but only sign up to add yours to the public{" "}
+            <strong>Leaderboard</strong> and keep it forever, on any device.
           </p>
         </GuideSection>
 

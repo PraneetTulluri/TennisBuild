@@ -6,6 +6,7 @@ import {
   computeArchetype,
 } from "@tennisbuild/game-engine";
 import { fetchLeaderboard } from "../api/builds.js";
+import { useAuth } from "../context/AuthContext.jsx";
 
 function attributesFromLocked(locked) {
   const result = {};
@@ -74,6 +75,7 @@ function rankBadgeClass(position) {
  * never trusted from a stored value, so it can't drift from the engine.
  */
 export default function LeaderboardPage() {
+  const { user, loading: authLoading } = useAuth();
   const [builds, setBuilds] = useState(null);
   const [error, setError] = useState(null);
   const [sortMode, setSortMode] = useState("overall");
@@ -102,11 +104,19 @@ export default function LeaderboardPage() {
       <p className="result-kicker">Leaderboard</p>
       <h1>Every Build</h1>
 
+      {!authLoading && !user && (
+        <p className="leaderboard-signup-nudge">
+          Only builds from signed-up accounts show up here.{" "}
+          <Link to="/register">Sign up</Link> to add yours.
+        </p>
+      )}
+
       {error && <p className="draft-error">Could not load the leaderboard: {error}</p>}
       {!error && !builds && <p>Loading builds…</p>}
       {builds && builds.length === 0 && (
         <p>
-          No builds saved yet. <Link to="/draft">Start a build</Link> to be the first.
+          No builds saved yet. <Link to="/register">Sign up</Link> and build one to be the
+          first.
         </p>
       )}
 
